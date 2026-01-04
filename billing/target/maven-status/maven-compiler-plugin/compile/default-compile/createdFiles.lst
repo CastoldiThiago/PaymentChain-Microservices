@@ -1,0 +1,4 @@
+com\paymentchain\billing\controller\InvoiceRestController.class
+com\paymentchain\billing\entities\Invoice.class
+com\paymentchain\billing\InvoiceApplication.class
+com\paymentchain\billing\respository\InvoiceRepository.class
