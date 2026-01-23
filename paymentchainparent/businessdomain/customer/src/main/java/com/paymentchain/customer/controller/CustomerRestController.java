@@ -96,8 +96,8 @@ public class CustomerRestController {
     }
     
     @GetMapping("/full")
-    public Customer getByCode(@RequestParam(name = "code") String code) throws UnknownHostException{
-        Customer customer = bt.get(code);
+    public Customer getFullById(@RequestParam(name = "id") Long id) throws UnknownHostException{
+        Customer customer = bt.get(id);
         
         return customer;
     }

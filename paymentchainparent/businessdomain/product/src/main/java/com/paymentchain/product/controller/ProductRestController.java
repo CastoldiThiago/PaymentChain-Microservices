@@ -5,6 +5,7 @@
 package com.paymentchain.product.controller;
 
 import com.paymentchain.product.entities.Product;
+import com.paymentchain.product.exception.BusinessRuleException;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.bind.annotation.RequestMapping;
 import java.util.List;
@@ -19,6 +20,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import com.paymentchain.product.repository.ProductRepository;
+import com.paymentchain.product.service.ProductService;
 
 /**
  *
@@ -30,6 +32,9 @@ public class ProductRestController {
     
     @Autowired
     ProductRepository productRepository;
+    
+    @Autowired
+    ProductService productService;
     
     @GetMapping()
     public List<Product> list() {
@@ -58,9 +63,9 @@ public class ProductRestController {
     }
     
     @PostMapping
-    public ResponseEntity<?> post(@RequestBody Product input) {
-        Product save = productRepository.save(input);
-        return ResponseEntity.ok(save);
+    public ResponseEntity<?> post(@RequestBody Product input) throws BusinessRuleException{
+        Product save = productService.save(input);
+        return ResponseEntity.status(HttpStatus.CREATED).body(save);
     }
     
     @DeleteMapping("/{id}")

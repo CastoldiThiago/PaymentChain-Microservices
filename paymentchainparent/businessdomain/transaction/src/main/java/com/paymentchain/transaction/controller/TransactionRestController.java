@@ -4,6 +4,8 @@
  */
 package com.paymentchain.transaction.controller;
 
+import com.paymentchain.transaction.dtos.CreateTransactionRequest;
+import com.paymentchain.transaction.dtos.TransactionDetailDTO;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.bind.annotation.RequestMapping;
 import java.util.List;
@@ -18,7 +20,10 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import com.paymentchain.transaction.entities.Transaction;
+import com.paymentchain.transaction.exception.BusinessRuleException;
 import com.paymentchain.transaction.repository.TransactionRepository;
+import com.paymentchain.transaction.service.TransactionService;
+import java.util.stream.Collectors;
 import org.springframework.web.bind.annotation.RequestParam;
 
 /**
@@ -32,29 +37,36 @@ public class TransactionRestController {
     @Autowired
     TransactionRepository transactionRepository;
     
+    @Autowired
+    TransactionService transactionService;
+    
     @GetMapping()
-    public ResponseEntity<List<Transaction>> list() {
+    public ResponseEntity<List<TransactionDetailDTO>> list() {
         List<Transaction> findAll = transactionRepository.findAll();
         if (findAll.isEmpty()){
             return ResponseEntity.noContent().build();
         }else{
-            return ResponseEntity.ok(findAll);
+            List<TransactionDetailDTO> dtos = findAll.stream()
+                    .map(transactionService::mapToDTO)
+                    .collect(Collectors.toList());
+            return ResponseEntity.ok(dtos);
         }
     }
     
     @GetMapping("/{id}")
-    public ResponseEntity<?> get(@PathVariable(name = "id") long id) {
+    public ResponseEntity<TransactionDetailDTO> get(@PathVariable(name = "id") long id) {
         Optional<Transaction> transaction = transactionRepository.findById(id);
         if (transaction.isPresent()){
-            return new ResponseEntity<>(transaction.get(), HttpStatus.OK);
+            TransactionDetailDTO dto = transactionService.mapToDTO(transaction.get());
+            return ResponseEntity.ok(dto);
         }else {
             return new ResponseEntity<>(HttpStatus.NOT_FOUND);
         }
     }
     
     @GetMapping("/customer/transactions")
-    public ResponseEntity<List<Transaction>> get(@RequestParam(name = "ibanAccount") String ibanAccount) {
-        List<Transaction> transactionsByCustomer = transactionRepository.findByAccount(ibanAccount);
+    public ResponseEntity<List<TransactionDetailDTO>> get(@RequestParam(name = "customerId") Long customerId) {
+        List<TransactionDetailDTO> transactionsByCustomer = transactionService.findTransactionsByCustomerId(customerId);
         if (transactionsByCustomer.isEmpty()){
             return ResponseEntity.noContent().build();
         }else{
@@ -71,7 +83,7 @@ public class TransactionRestController {
             find.setDate(input.getDate());
             find.setDescription(input.getDescription());
             find.setFee(input.getFee());
-            find.setAccountIban(input.getAccountIban());
+            find.setAccount(input.getAccount());
             find.setReference(input.getReference());
             find.setStatus(input.getStatus());
         } else {
@@ -82,8 +94,8 @@ public class TransactionRestController {
     }
     
     @PostMapping
-    public ResponseEntity<?> post(@RequestBody Transaction input) {
-        Transaction save = transactionRepository.save(input);
+    public ResponseEntity<TransactionDetailDTO> post(@RequestBody CreateTransactionRequest input) throws BusinessRuleException {
+        TransactionDetailDTO save = transactionService.performTransaction(input);
         return ResponseEntity.ok(save);
     }
     

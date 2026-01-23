@@ -23,10 +23,9 @@ public class Customer {
     @GeneratedValue(strategy = GenerationType.AUTO)
     @Id
     private long id;
-    private String code;
+    private String dni;
     private String name;
     private String phone;
-    private String iban;
     private String surname;
     private String address;
     

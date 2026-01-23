@@ -13,6 +13,7 @@ import io.netty.channel.ChannelOption;
 import io.netty.channel.epoll.EpollChannelOption;
 import io.netty.handler.timeout.ReadTimeoutHandler;
 import io.netty.handler.timeout.WriteTimeoutHandler;
+import jakarta.ws.rs.NotFoundException;
 import java.net.UnknownHostException;
 import java.time.Duration;
 import java.util.Collections;
@@ -104,7 +105,7 @@ public class BusinessTransaction {
      * @param iban account number of the customer
      * @return All transaction that belong this account
      */
-    private List<?> getTransactions(String iban){
+    private List<?> getTransactions(long customerId){
         
         WebClient build = webClientBuilder
                 .clientConnector(new ReactorClientHttpConnector(client))
@@ -115,7 +116,7 @@ public class BusinessTransaction {
         
         List<?> transactions = build.method(HttpMethod.GET).uri(uriBuilder -> uriBuilder
         .path("/customer/transactions")
-        .queryParam("ibanAccount", iban)
+        .queryParam("customerId", customerId)
         .build())
          .retrieve().bodyToFlux(Object.class).collectList().block();
         
@@ -141,8 +142,9 @@ public class BusinessTransaction {
         return save;
     }
     
-    public Customer get(@RequestParam(name = "code") String code) throws UnknownHostException {
-        Customer customer = customerRepository.findByCode(code);
+    public Customer get(@RequestParam(name = "id") Long id) throws UnknownHostException {
+        Customer customer = customerRepository.findById(id)
+                .orElseThrow(() -> new NotFoundException("Customer no encontrado"));
         if (customer != null){
             List<CustomerProduct> products = customer.getProducts();
 
@@ -153,7 +155,7 @@ public class BusinessTransaction {
             }
 
             //find all transactions that belong this account number
-            List<?> transactions = getTransactions(customer.getIban());
+            List<?> transactions = getTransactions(customer.getId());
             customer.setTransactions(transactions);
         }
         return customer;
