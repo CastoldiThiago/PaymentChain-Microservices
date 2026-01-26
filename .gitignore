@@ -1,0 +1,14 @@
+# Ignorar archivos y carpetas comunes de los proyectos spring boot
+target/
+*.log
+*.class
+*.jar
+*.war
+*.iml
+.idea/
+.vscode/
+.DS_Store
+*.swp
+*.bak
+*.tmp
+*.orig
