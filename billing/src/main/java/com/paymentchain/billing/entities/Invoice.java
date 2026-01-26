@@ -22,8 +22,8 @@ import lombok.Data;
 public class Invoice {
    @Id
   @GeneratedValue(strategy=GenerationType.AUTO)
-   private long id;
-   private long customerId;
+   private Long id;
+   private Long customerId;
    private String number;
    private String detail;
    private double amount;  

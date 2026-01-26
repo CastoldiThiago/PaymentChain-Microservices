@@ -30,8 +30,6 @@ public class TransactionDetailDTO {
     @Schema(description = "Concepto o referencia breve", example = "Retiro Cajero")
     private String reference;
 
-    // --- EL TRUCO PARA EVITAR EL ERROR DE HIBERNATE ---
-    // No devolvemos el objeto Account entero, solo el IBAN.
     @Schema(description = "IBAN de la cuenta asociada", example = "AR00000123...")
     private String accountIban; 
 

@@ -57,16 +57,16 @@ public class AccountController {
     
     @PutMapping("/{id}")
     public ResponseEntity<?> put(@PathVariable(name = "id") long id, @RequestBody Account input) {
-        Account find = accountRepository.findById(id).get();
-        if (find != null) {
-            find.setIban(input.getIban());
-            find.setBalance(input.getBalance());
-            find.setCustomerId(input.getCustomerId());
-            find.setVersion(input.getVersion());
-        } else {
+        Optional<Account> find = accountRepository.findById(id);
+        if (find.isEmpty()){
             return ResponseEntity.notFound().build();
         }
-        Account save = accountRepository.save(find);
+        Account findAccount = find.get();
+        findAccount.setIban(input.getIban());
+        findAccount.setBalance(input.getBalance());
+        findAccount.setCustomerId(input.getCustomerId());
+        findAccount.setVersion(input.getVersion());
+        Account save = accountRepository.save(findAccount);
         return ResponseEntity.ok(save);
     }
     
@@ -79,8 +79,10 @@ public class AccountController {
     @DeleteMapping("/{id}")
     public ResponseEntity<?> delete(@PathVariable(name = "id") long id) {
         Optional<Account> findById = accountRepository.findById(id);
-        if (findById.get() != null){
-            accountRepository.delete(findById.get());
+        if (findById.isPresent()){
+            accountRepository.deleteById(id);
+        }else {
+            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
         }
         return new ResponseEntity<>(HttpStatus.OK);
     }
