@@ -1,16 +1,13 @@
-package com.paymentchain.transaction.dtos;
+package com.paymentchain.customer.dtos;
 
 import lombok.Data;
 
 import java.math.BigDecimal;
 
 @Data
-public class AccountResponse {
+public class AccountDto {
     private Long accountId;
     private String iban;
     private BigDecimal balance;
-    private Long customerId;
-
     private String productName;
-    private BigDecimal transactionFee;
 }

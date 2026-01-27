@@ -23,7 +23,6 @@ public class AccountMapper {
 
         // Mapeamos datos del producto si existe
         if (entity.getProduct() != null) {
-            // dto.setProductCode(entity.getProduct().getCode()); // Si tuvieras código
             dto.setProductName(entity.getProduct().getName());
             dto.setTransactionFee(entity.getProduct().getTransactionFeePercentage());
         }

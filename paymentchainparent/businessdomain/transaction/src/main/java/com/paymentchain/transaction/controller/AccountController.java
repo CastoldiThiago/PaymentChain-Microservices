@@ -16,6 +16,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 /**
  *
  * @author casto
@@ -58,5 +60,18 @@ public class AccountController {
 
         // Devolvemos el DTO de respuesta también al crear
         return ResponseEntity.status(HttpStatus.CREATED).body(accountMapper.toResponse(saved));
+    }
+
+    @GetMapping("/customer/{customerId}")
+    public ResponseEntity<List<AccountResponse>> getByCustomerId(@PathVariable(name = "customerId") Long customerId) {
+
+        // 1. Buscar Entidades
+        List<Account> accounts = accountRepository.findByCustomerId(customerId);
+
+        // 2. Convertir a DTOs usando el Mapper existente
+        List<AccountResponse> dtos = accountMapper.toResponseList(accounts);
+
+        // 3. Responder
+        return ResponseEntity.ok(dtos);
     }
 }
