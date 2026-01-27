@@ -3,43 +3,33 @@
  * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
  */
 package com.paymentchain.transaction.entities;
-import jakarta.persistence.Entity;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
-import jakarta.persistence.FetchType;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
+
+import jakarta.persistence.*;
+import lombok.Data;
+
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import lombok.Data;
 /**
  *
  * @author casto
  */
-@Data
 @Entity
+@Data
 public class Transaction {
-    @GeneratedValue(strategy = GenerationType.AUTO)
     @Id
-    private long id;
-    private String reference;
-    
-    @ManyToOne(fetch = FetchType.LAZY) // Lazy para rendimiento
-    @JoinColumn(name = "account_id", nullable = false) // Esto crea la Foreign Key en la DB
-    private Account account;
-    
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
     private LocalDateTime date;
-    private BigDecimal amount;
-    private BigDecimal fee;
-    private String description;
-    
-    @Enumerated(EnumType.STRING)
-    private Status status;
-    @Enumerated(EnumType.STRING)
-    private Channel channel;
-    
-    
+    private String reference;
+
+    private BigDecimal amount; // Monto original
+    private BigDecimal fee;    // Comisión cobrada
+    private BigDecimal total;  // Monto + Comisión (lo que se descontó)
+
+    private String status; // PENDING, COMPLETED, REJECTED
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "account_id")
+    private Account account;
 }

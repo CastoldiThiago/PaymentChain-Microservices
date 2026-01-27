@@ -5,15 +5,16 @@
 package com.paymentchain.transaction.repository;
 
 import com.paymentchain.transaction.entities.Transaction;
-import java.util.List;
 import org.springframework.data.jpa.repository.JpaRepository;
+
+import java.util.List;
 
 /**
  *
  * @author casto
  */
 public interface TransactionRepository extends JpaRepository<Transaction, Long> {
-       
-    
-    List<Transaction> findByAccount_CustomerId(Long customerId);
+
+
+    List<Transaction> findByAccountIban(String iban);
 } 

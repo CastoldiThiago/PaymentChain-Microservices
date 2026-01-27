@@ -5,132 +5,139 @@
 package com.paymentchain.transaction.service;
 
 import com.paymentchain.transaction.dtos.CreateTransactionRequest;
-import com.paymentchain.transaction.dtos.TransactionDetailDTO;
+import com.paymentchain.transaction.dtos.TransactionResponse;
+import com.paymentchain.transaction.dtos.TransferRequest;
 import com.paymentchain.transaction.entities.Account;
-import com.paymentchain.transaction.entities.Status;
 import com.paymentchain.transaction.entities.Transaction;
 import com.paymentchain.transaction.exception.BusinessRuleException;
+import com.paymentchain.transaction.mapper.TransactionMapper;
 import com.paymentchain.transaction.repository.AccountRepository;
 import com.paymentchain.transaction.repository.TransactionRepository;
-import jakarta.persistence.EntityNotFoundException;
 import jakarta.transaction.Transactional;
-import java.math.BigDecimal;
-import java.math.RoundingMode;
-import java.time.LocalDateTime;
-import java.util.List;
-import java.util.stream.Collectors;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
 
 /**
  *
  * @author casto
  */
 @Service
+@RequiredArgsConstructor
 public class TransactionService {
-    @Autowired
-    TransactionRepository transactionRepository;
-    
-    @Autowired
-    AccountRepository accountRepo;
-    
-    // Representa el 0.98%
-    private static final BigDecimal COMMISSION_RATE = new BigDecimal("0.0098");
-    
+
+    private final AccountRepository accountRepository;
+    private final TransactionRepository transactionRepository;
+    private final TransactionMapper mapper;
+
     @Transactional
-    public TransactionDetailDTO performTransaction(CreateTransactionRequest input) throws BusinessRuleException{
-        
-        if ( (input.getAccountIban().isBlank())){
-            BusinessRuleException businessRuleException = new BusinessRuleException("1010", "Error validacion, iban de transacción es obligatorio", HttpStatus.PRECONDITION_FAILED);
-                   throw businessRuleException;
-        }
-        
-        Account account = accountRepo.findByIban(input.getAccountIban())
-                .orElseThrow(() -> new EntityNotFoundException("Cuenta con IBAN " + input.getAccountIban() + " no existe"));
-        
-        BigDecimal transactionAmount = input.getAmount(); // Ej: -100.00
+    public TransactionResponse performTransaction(CreateTransactionRequest request) throws BusinessRuleException {
+
+        Account account = accountRepository.findByIban(request.getAccountIban())
+                .orElseThrow(() -> new BusinessRuleException("1001",
+                        "Cuenta no encontrada: " + request.getAccountIban(),
+                        HttpStatus.PRECONDITION_FAILED));
+
+        BigDecimal amount = request.getAmount();
         BigDecimal fee = BigDecimal.ZERO;
-        BigDecimal totalToDebit;
-        
-        if (transactionAmount.compareTo(BigDecimal.ZERO) < 0) {
+        BigDecimal totalAction = amount;
 
-            // A. Calculamos el 0.98% del valor ABSOLUTO
-            // abs() convierte -100 a 100 para multiplicar
-            BigDecimal rawFee = transactionAmount.abs().multiply(COMMISSION_RATE);
+        if (amount.compareTo(BigDecimal.ZERO) < 0) {
+            BigDecimal positiveAmount = amount.abs();
 
-            // B. Redondeo BANCARIO (Importante: 2 decimales, RoundingMode.HALF_EVEN)
-            fee = rawFee.setScale(2, RoundingMode.HALF_EVEN);
+            if (account.getProduct() != null) {
+                fee = positiveAmount.multiply(account.getProduct().getTransactionFeePercentage());
+            }
 
-            // C. El impacto total es el monto (negativo) MENOS el fee (positivo)
-            // Ej: -100 - 0.98 = -100.98
-            totalToDebit = transactionAmount.subtract(fee);
+            totalAction = amount.subtract(fee);
+            BigDecimal totalDebit = positiveAmount.add(fee);
 
-        } else {
-            // Si es depósito (positivo), no hay fee (o lógica distinta)
-            totalToDebit = transactionAmount;
+            if (account.getBalance().compareTo(totalDebit) < 0) {
+                throw new BusinessRuleException("1003",
+                        "Saldo insuficiente. Actual: " + account.getBalance() + ", Requerido: " + totalDebit,
+                        HttpStatus.PRECONDITION_FAILED);
+            }
         }
 
-        // 3. Validación de Saldo (Business Exception)
-        // Calculamos el saldo hipotético futuro
-        BigDecimal futureBalance = account.getBalance().add(totalToDebit);
+        account.setBalance(account.getBalance().add(totalAction));
+        accountRepository.save(account);
 
-        if (futureBalance.compareTo(BigDecimal.ZERO) < 0) {
-            // Lanzamos la excepción con detalles claros
-            throw new BusinessRuleException("500","Saldo insuficiente. Saldo actual:"+ account.getBalance()+", Monto + Comisión: "+ totalToDebit.abs(), HttpStatus.PRECONDITION_REQUIRED);
+        Transaction transaction = new Transaction();
+        transaction.setAccount(account);
+        transaction.setDate(LocalDateTime.now());
+        transaction.setReference(request.getReference());
+        transaction.setAmount(amount);
+        transaction.setFee(fee);
+        transaction.setTotal(totalAction);
+        transaction.setStatus("COMPLETED");
+
+        Transaction savedTransaction = transactionRepository.save(transaction);
+
+        return mapper.toResponse(savedTransaction);
+    }
+
+    @Transactional
+    public void transfer(TransferRequest request) throws BusinessRuleException {
+        // 1. Recuperar ambas cuentas
+        Account source = accountRepository.findByIbanForUpdate(request.getSourceIban())
+                .orElseThrow(() -> new BusinessRuleException("1001", "Cuenta origen no existe", HttpStatus.NOT_FOUND));
+
+        Account target = accountRepository.findByIbanForUpdate(request.getTargetIban())
+                .orElseThrow(() -> new BusinessRuleException("1001", "Cuenta destino no existe", HttpStatus.NOT_FOUND));
+
+        // 2. Validar misma moneda o reglas básicas (Opcional)
+        if (source.getId().equals(target.getId())) {
+            throw new BusinessRuleException("1005", "No puedes transferirte a ti mismo", HttpStatus.BAD_REQUEST);
         }
 
-        // 4. Actualizar Estado (Si pasó la validación)
-        account.setBalance(futureBalance);
-        accountRepo.save(account);
-       
-        // 5. Guardar Transacción
-        Transaction tx = new Transaction();
-        tx.setAccount(account);
-        tx.setAmount(transactionAmount); // Guardamos el monto solicitado original (-100)
-        tx.setFee(fee);                  // Guardamos la comisión aparte (0.98)
-        tx.setReference(input.getReference());
-        tx.setDescription(input.getDescription());
-        tx.setDate(LocalDateTime.now());
-        tx.setStatus(Status.LIQUIDADA);
-        
-        Transaction savedTx = transactionRepository.save(tx);
-        
-        return mapToDTO(savedTx);
-    }
-    
-    public List<TransactionDetailDTO> findTransactionsByCustomerId (Long customerId){
-        List<Transaction> customerTransactions = transactionRepository.findByAccount_CustomerId(customerId);
-        return customerTransactions.stream()
-            .map(this::mapToDTO)
-            .collect(Collectors.toList());
-    }
-    
-    public Account createAccount(Account account) {
-        // FORZAR QUE SEA NUEVO
-        account.setId(null); 
+        // 3. Simular retiro en Origen (Aplica comisión si corresponde)
+        // Reutilizamos la lógica de validación de saldo calculando el débito
+        BigDecimal amount = request.getAmount();
+        BigDecimal fee = BigDecimal.ZERO;
 
-        account.setVersion(null); 
-
-        // Inicializar saldo en cero si viene nulo
-        if (account.getBalance() == null) {
-            account.setBalance(BigDecimal.ZERO);
+        if (source.getProduct() != null) {
+            fee = amount.multiply(source.getProduct().getTransactionFeePercentage());
         }
 
-        return accountRepo.save(account);
+        BigDecimal totalDebit = amount.add(fee);
+
+        if (source.getBalance().compareTo(totalDebit) < 0) {
+            throw new BusinessRuleException("1003", "Saldo insuficiente en origen", HttpStatus.PRECONDITION_FAILED);
+        }
+
+        // 4. Ejecutar Movimientos
+        source.setBalance(source.getBalance().subtract(totalDebit));
+        target.setBalance(target.getBalance().add(amount)); // Al destino le llega el neto, sin fee
+
+        accountRepository.save(source);
+        accountRepository.save(target);
+
+        // 5. Generar Historiales (Dos registros: uno para cada uno)
+
+        // Registro para el que envía (Salida)
+        Transaction debitTx = new Transaction();
+        debitTx.setAccount(source);
+        debitTx.setAmount(amount.negate()); // Negativo
+        debitTx.setFee(fee);
+        debitTx.setTotal(totalDebit.negate());
+        debitTx.setDate(LocalDateTime.now());
+        debitTx.setReference("TRANSFER SENT: " + request.getReference());
+        debitTx.setStatus("COMPLETED");
+        transactionRepository.save(debitTx);
+
+        // Registro para el que recibe (Entrada)
+        Transaction creditTx = new Transaction();
+        creditTx.setAccount(target);
+        creditTx.setAmount(amount); // Positivo
+        creditTx.setFee(BigDecimal.ZERO); // quien recibe no paga comisión
+        creditTx.setTotal(amount);
+        creditTx.setDate(LocalDateTime.now());
+        creditTx.setReference("TRANSFER RECEIVED: " + request.getReference());
+        creditTx.setStatus("COMPLETED");
+        transactionRepository.save(creditTx);
     }
-    
-    public TransactionDetailDTO mapToDTO(Transaction t) {
-        return TransactionDetailDTO.builder()
-                .id(t.getId())
-                .reference(t.getReference())
-                .accountIban(t.getAccount().getIban()) 
-                .date(t.getDate())
-                .amount(t.getAmount())
-                .fee(t.getFee())
-                .description(t.getDescription())
-                .status(t.getStatus())
-                .channel(t.getChannel())
-                .build();
-    }
+
 }

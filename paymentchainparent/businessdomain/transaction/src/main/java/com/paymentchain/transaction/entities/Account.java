@@ -4,34 +4,36 @@
  */
 package com.paymentchain.transaction.entities;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.Table;
-import jakarta.persistence.Version;
-import java.math.BigDecimal;
+import jakarta.persistence.*;
 import lombok.Data;
+
+import java.math.BigDecimal;
+import java.util.List;
 
 /**
  *
  * @author casto
  */
 @Entity
-@Table(name = "accounts")
 @Data
 public class Account {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-    
-    private String iban;
+
+    @Column(unique = true)
+    private String iban; // Clave de negocio (AR0000...)
+
     private BigDecimal balance;
-    
-    @Column(name = "customer_id", nullable = false)
-    private Long customerId; 
-    
-    @Version
-    private Long version; 
+
+    private Long customerId; // ID del cliente
+
+    // (EAGER para tener la regla siempre a mano)
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "product_id")
+    private AccountProduct product;
+
+    // Relación para ver historial desde la cuenta
+    @OneToMany(mappedBy = "account", fetch = FetchType.LAZY)
+    private List<Transaction> transactions;
 }

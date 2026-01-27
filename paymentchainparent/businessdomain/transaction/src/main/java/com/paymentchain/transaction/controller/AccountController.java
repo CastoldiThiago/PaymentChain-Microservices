@@ -4,86 +4,59 @@
  */
 package com.paymentchain.transaction.controller;
 
+import com.paymentchain.transaction.dtos.AccountResponse;
+import com.paymentchain.transaction.dtos.CreateAccountRequest;
 import com.paymentchain.transaction.entities.Account;
+import com.paymentchain.transaction.entities.AccountProduct;
+import com.paymentchain.transaction.mapper.AccountMapper;
+import com.paymentchain.transaction.repository.AccountProductRepository;
 import com.paymentchain.transaction.repository.AccountRepository;
-import com.paymentchain.transaction.service.TransactionService;
-import java.util.List;
-import java.util.Optional;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 /**
  *
  * @author casto
  */
 @RestController
-@RequestMapping("/account")
+@RequestMapping("/accounts")
+@RequiredArgsConstructor
 public class AccountController {
-    @Autowired
-    AccountRepository accountRepository;
-    
-    @Autowired
-    TransactionService transactionService;
-    
-    @GetMapping()
-    public ResponseEntity<List<Account>> list() {
-        List<Account> findAll = accountRepository.findAll();
-        if (findAll.isEmpty()){
-            return ResponseEntity.noContent().build();
-        }else{
-            return ResponseEntity.ok(findAll);
-        }
+
+    private final AccountRepository accountRepository;
+    private final AccountProductRepository productRepository;
+    private final AccountMapper accountMapper;
+
+    // GET /accounts/{iban} - Consultar saldo y producto
+    @GetMapping("/{iban}")
+    public ResponseEntity<AccountResponse> getByIban(@PathVariable(name="iban") String iban) {
+        return accountRepository.findByIban(iban)
+                .map(accountMapper::toResponse)
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
     }
-    
-    @GetMapping("/{id}")
-    public ResponseEntity<?> get(@PathVariable(name = "id") long id) {
-        Optional<Account> transaction = accountRepository.findById(id);
-        if (transaction.isPresent()){
-            return new ResponseEntity<>(transaction.get(), HttpStatus.OK);
-        }else {
-            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
-        }
-    }
-    
-    
-    @PutMapping("/{id}")
-    public ResponseEntity<?> put(@PathVariable(name = "id") long id, @RequestBody Account input) {
-        Optional<Account> find = accountRepository.findById(id);
-        if (find.isEmpty()){
-            return ResponseEntity.notFound().build();
-        }
-        Account findAccount = find.get();
-        findAccount.setIban(input.getIban());
-        findAccount.setBalance(input.getBalance());
-        findAccount.setCustomerId(input.getCustomerId());
-        findAccount.setVersion(input.getVersion());
-        Account save = accountRepository.save(findAccount);
-        return ResponseEntity.ok(save);
-    }
-    
+
+    // POST /accounts - Crear una cuenta nueva
     @PostMapping
-    public ResponseEntity<?> post(@RequestBody Account input){
-        Account save = transactionService.createAccount(input);
-        return ResponseEntity.ok(save);
-    }
-    
-    @DeleteMapping("/{id}")
-    public ResponseEntity<?> delete(@PathVariable(name = "id") long id) {
-        Optional<Account> findById = accountRepository.findById(id);
-        if (findById.isPresent()){
-            accountRepository.deleteById(id);
-        }else {
-            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+    public ResponseEntity<?> create(@RequestBody CreateAccountRequest request) { // Asumo que ya usas el DTO de entrada que hablamos antes
+
+        AccountProduct product = productRepository.findById(request.getProductId()).orElse(null);
+
+        if (product == null) {
+            return ResponseEntity.badRequest().body("Producto no encontrado");
         }
-        return new ResponseEntity<>(HttpStatus.OK);
+
+        Account account = new Account();
+        account.setIban(request.getIban());
+        account.setBalance(request.getBalance());
+        account.setCustomerId(request.getCustomerId());
+        account.setProduct(product);
+
+        Account saved = accountRepository.save(account);
+
+        // Devolvemos el DTO de respuesta también al crear
+        return ResponseEntity.status(HttpStatus.CREATED).body(accountMapper.toResponse(saved));
     }
 }
