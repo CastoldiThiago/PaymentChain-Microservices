@@ -1,0 +1,44 @@
+server:
+  port: 8080
+
+logging:
+    level:
+        org.springframework.cloud.gateway: DEBUG
+        reactor.netty.http.client: DEBUG
+
+spring:
+  application:
+    name: api-gateway
+  cloud:
+    config:
+      enabled: false
+    gateway:
+      server:
+        webflux:
+          # Configuración de Discovery (Eureka)
+          discovery:
+            locator:
+              enabled: true
+              lower-case-service-id: true
+
+          # Definición de Rutas
+          routes:
+            - id: customer-service
+              uri: lb://businessdomain-customer
+              predicates:
+                - Path=/customers/**
+
+            - id: transaction-service
+              uri: lb://businessdomain-transaction
+              predicates:
+                - Path=/transactions/**, /accounts/**
+
+            - id: product-service
+              uri: lb://businessdomain-product
+              predicates:
+                - Path=/products/**
+
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka
