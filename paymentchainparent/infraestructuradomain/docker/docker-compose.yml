@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   # Base de datos para TRANSACTION y CUSTOMER (Podemos usar la misma instancia)
   postgres-db:
@@ -26,4 +24,27 @@ services:
     depends_on:
       - postgres-db
 
-  # Aquí agregarás Keycloak y RabbitMQ cuando llegues a esos videos
+  keycloak:
+    image: quay.io/keycloak/keycloak:24.0.1
+    container_name: paymentchain-keycloak
+    command: start-dev
+    environment:
+      # Credenciales del Administrador de Keycloak
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: admin
+
+      # Configuración de Base de Datos
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://postgres-db:5432/keycloak_db
+      KC_DB_USERNAME: postgres
+      KC_DB_PASSWORD: admin # La misma que pusiste en el servicio de postgres
+
+      # Configuraciones extra para dev
+      KC_HTTP_ENABLED: true
+      KC_HOSTNAME_STRICT: false
+      KC_HOSTNAME_STRICT_HTTPS: false
+    ports:
+      - "8180:8080" # Accederemos por http://localhost:8180
+    depends_on:
+      - postgres-db
+    restart: always
