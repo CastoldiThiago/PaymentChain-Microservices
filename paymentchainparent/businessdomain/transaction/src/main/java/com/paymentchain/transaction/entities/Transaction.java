@@ -32,4 +32,5 @@ public class Transaction {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "account_id")
     private Account account;
+    private String currency; // Moneda en la que se realizó la transacción
 }

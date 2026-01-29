@@ -20,6 +20,7 @@ public class AccountMapper {
         dto.setIban(entity.getIban());
         dto.setBalance(entity.getBalance());
         dto.setCustomerId(entity.getCustomerId());
+        dto.setCurrency(entity.getCurrency());
 
         // Mapeamos datos del producto si existe
         if (entity.getProduct() != null) {

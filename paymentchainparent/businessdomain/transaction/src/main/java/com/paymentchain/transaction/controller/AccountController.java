@@ -55,6 +55,7 @@ public class AccountController {
         account.setBalance(request.getBalance());
         account.setCustomerId(request.getCustomerId());
         account.setProduct(product);
+        account.setCurrency(request.getCurrency());
 
         Account saved = accountRepository.save(account);
 

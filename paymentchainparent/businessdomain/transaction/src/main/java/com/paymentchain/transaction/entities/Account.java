@@ -36,4 +36,6 @@ public class Account {
     // Relación para ver historial desde la cuenta
     @OneToMany(mappedBy = "account", fetch = FetchType.LAZY)
     private List<Transaction> transactions;
+
+    private String currency;
 }

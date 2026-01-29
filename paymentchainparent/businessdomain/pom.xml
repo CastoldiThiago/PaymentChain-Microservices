@@ -15,8 +15,8 @@
     
     <modules>
         <module>customer</module>
-        <module>product</module>
         <module>transaction</module>
+        <module>currency-exchange</module>
     </modules>
     
     

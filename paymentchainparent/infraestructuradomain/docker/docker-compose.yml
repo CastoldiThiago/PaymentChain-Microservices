@@ -1,5 +1,7 @@
 services:
-  # Base de datos para TRANSACTION y CUSTOMER (Podemos usar la misma instancia)
+  # ==========================================
+  # 1. INFRAESTRUCTURA DE DATOS Y SEGURIDAD
+  # ==========================================
   postgres-db:
     image: postgres:15-alpine
     container_name: paymentchain-db
@@ -10,9 +12,10 @@ services:
       - POSTGRES_PASSWORD=admin
       - POSTGRES_DB=paymentchain_db
     volumes:
-      - ./postgres-data:/var/lib/postgresql/data # Persistencia de datos
+      - ./postgres-data:/var/lib/postgresql/data
+    networks:
+      - paymentchain-network
 
-  # Interfaz gráfica para ver la BD (Opcional, pero muy útil)
   pgadmin:
     image: dpage/pgadmin4
     container_name: pgadmin
@@ -23,28 +26,127 @@ services:
       - "5050:80"
     depends_on:
       - postgres-db
+    networks:
+      - paymentchain-network
+
+  redis-cache: # <--- NUEVO: Para el Currency Exchange
+    image: redis:alpine
+    container_name: paymentchain-redis
+    ports:
+      - "6379:6379"
+    networks:
+      - paymentchain-network
 
   keycloak:
     image: quay.io/keycloak/keycloak:24.0.1
     container_name: paymentchain-keycloak
     command: start-dev
     environment:
-      # Credenciales del Administrador de Keycloak
       KEYCLOAK_ADMIN: admin
       KEYCLOAK_ADMIN_PASSWORD: admin
-
-      # Configuración de Base de Datos
       KC_DB: postgres
-      KC_DB_URL: jdbc:postgresql://postgres-db:5432/keycloak_db
+      KC_DB_URL: jdbc:postgresql://postgres-db:5432/paymentchain_db # Usamos la misma DB para simplificar
       KC_DB_USERNAME: postgres
-      KC_DB_PASSWORD: admin # La misma que pusiste en el servicio de postgres
-
-      # Configuraciones extra para dev
+      KC_DB_PASSWORD: admin
       KC_HTTP_ENABLED: true
       KC_HOSTNAME_STRICT: false
       KC_HOSTNAME_STRICT_HTTPS: false
     ports:
-      - "8180:8080" # Accederemos por http://localhost:8180
+      - "8180:8080"
     depends_on:
       - postgres-db
-    restart: always
+    networks:
+      - paymentchain-network
+
+  # ==========================================
+  # 2. INFRAESTRUCTURA MICROSERVICIOS
+  # ==========================================
+  eureka-server:
+    image: paymentchain/eureka-server
+    build: ../../infraestructuradomain/eurekaserver # Ajusta la ruta si es distinta
+    container_name: eureka-server
+    ports:
+      - "8761:8761"
+    networks:
+      - paymentchain-network
+
+  api-gateway:
+    image: paymentchain/api-gateway
+    build: ../../infraestructuradomain/apigateway
+    container_name: api-gateway
+    ports:
+      - "8080:8080"
+    environment:
+
+      # URL DE EUREKA: Usamos la variable directa de Spring Boot
+      # Esto sobrescribe: eureka.client.serviceUrl.defaultZone
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka-server:8761/eureka/
+
+      # URL DE KEYCLOAK (Si lo usas en el código)
+      - SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK_SET_URI=http://paymentchain-keycloak:8080/realms/paymentchain-realm/protocol/openid-connect/certs
+    depends_on:
+      - eureka-server
+      - keycloak
+    networks:
+      - paymentchain-network
+
+  # ==========================================
+  # 3. DOMINIO DE NEGOCIO (SIN PUERTOS PÚBLICOS)
+  # ==========================================
+
+  businessdomain-customer:
+    image: paymentchain/customer
+    build: ../../businessdomain/customer
+    container_name: customer-service
+    # SIN PORTS: Solo accesible via Gateway
+    environment:
+      - DB_URL=jdbc:postgresql://postgres-db:5432/paymentchain_db
+      - DB_USER=postgres
+      - DB_PASSWORD=admin
+      - SPRING_CLOUD_CONFIG_ENABLED=false
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka-server:8761/eureka/
+    depends_on:
+      - postgres-db
+      - eureka-server
+    networks:
+      - paymentchain-network
+
+  businessdomain-transaction:
+    image: paymentchain/transaction
+    build: ../../businessdomain/transaction
+    container_name: transaction-service
+    # SIN PORTS
+    environment:
+      - DB_URL=jdbc:postgresql://postgres-db:5432/paymentchain_db
+      - DB_USER=postgres
+      - DB_PASSWORD=admin
+      - SPRING_CLOUD_CONFIG_ENABLED=false
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka-server:8761/eureka/
+      # URL de fallback para el cliente Feign (apunta al nombre del contenedor)
+      - CURRENCY_SERVICE_URL=http://currency-exchange:8090
+    depends_on:
+      - postgres-db
+      - eureka-server
+      - currency-exchange # Esperamos a que inicie el servicio de monedas
+    networks:
+      - paymentchain-network
+
+  currency-exchange: # <--- NUEVO MICROSERVICIO
+    image: paymentchain/currency-exchange
+    build: ../../businessdomain/currency-exchange
+    container_name: currency-exchange
+    # SIN PORTS
+    environment:
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka-server:8761/eureka/
+      - REDIS_HOST=paymentchain-redis
+      - SPRING_CLOUD_CONFIG_ENABLED=false
+      - REDIS_PORT=6379
+    depends_on:
+      - redis-cache
+      - eureka-server
+    networks:
+      - paymentchain-network
+
+networks:
+  paymentchain-network:
+    driver: bridge

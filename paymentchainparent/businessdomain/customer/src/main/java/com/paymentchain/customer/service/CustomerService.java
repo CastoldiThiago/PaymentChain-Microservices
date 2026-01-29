@@ -19,65 +19,70 @@ import java.util.List;
 public class CustomerService {
 
     private final CustomerRepository customerRepository;
-    private final WebClient.Builder webClientBuilder; // Inyectamos el cliente HTTP
-
+    private final WebClient.Builder webClientBuilder;
     private final CustomerMapper customerMapper;
-
-
 
     public CustomerResponse createCustomerWithAccount(Customer customer) {
 
-        // 1. Guardar Cliente (Sin IBAN todavía)
+        // 1. Guardar Cliente
         customer.setStatus("CREATED");
         Customer savedCustomer = customerRepository.save(customer);
 
-        // 2. Generar IBAN y llamar al otro Microservicio
+        // 2. Preparar Request para el otro microservicio
         String newIban = "AR" + System.currentTimeMillis();
 
         AccountRequest accountReq = new AccountRequest();
         accountReq.setCustomerId(savedCustomer.getId());
         accountReq.setIban(newIban);
         accountReq.setBalance(BigDecimal.ZERO);
+        // NUEVO: Definir la moneda por defecto (ARS)
+        accountReq.setCurrency("ARS");
         accountReq.setProductId(1L);
 
         try {
+            // CORRECCIÓN DE URL PARA DOCKER
+            // Usamos el nombre del contenedor definido en docker-compose ("transaction-service")
+            // Asumimos que dentro del contenedor corre en el puerto 8080 (default de Spring)
+            String transactionUrl = "http://transaction-service:8083/accounts";
+            // OJO: Verifica si tu Controller tiene @RequestMapping("/transaction") o directo "/accounts"
+
             webClientBuilder.build()
                     .post()
-                    .uri("http://localhost:8083/accounts") // URL Transaction
+                    .uri(transactionUrl)
                     .bodyValue(accountReq)
                     .retrieve()
                     .bodyToMono(Object.class)
                     .block();
 
-            // 3. Actualizar estado a ACTIVE
+            // 3. Confirmar éxito
             savedCustomer.setStatus("ACTIVE");
             savedCustomer = customerRepository.save(savedCustomer);
 
             return customerMapper.toResponse(savedCustomer, newIban);
 
         } catch (Exception e) {
+            // COMPENSATING TRANSACTION: Si falla la cuenta, marcamos error en cliente
             savedCustomer.setStatus("ERROR_ACCOUNT");
             customerRepository.save(savedCustomer);
-            throw new RuntimeException("Error creando cuenta: " + e.getMessage());
+            throw new RuntimeException("Error creando cuenta en microservicio Transaction: " + e.getMessage());
         }
     }
 
     public CustomerFullResponse getCustomerWithAccounts(Long customerId) {
-        // 1. Buscamos datos personales (Local)
         Customer customer = customerRepository.findById(customerId)
                 .orElseThrow(() -> new RuntimeException("Cliente no encontrado"));
 
-        // 2. Buscamos sus cuentas (Remoto)
-        // TIPADO FUERTE: .bodyToFlux(AccountDto.class)
+        // CORRECCIÓN DE URL PARA DOCKER
+        String transactionUrl = "http://transaction-service:8083/accounts/customer/" + customerId;
+
         List<AccountDto> accounts = webClientBuilder.build()
                 .get()
-                .uri("http://localhost:8083/accounts/customer/" + customerId)
+                .uri(transactionUrl)
                 .retrieve()
-                .bodyToFlux(AccountDto.class) // <--- Aquí ocurre la magia de conversión JSON -> Java
+                .bodyToFlux(AccountDto.class)
                 .collectList()
                 .block();
 
-        // 3. Unificamos usando el Mapper
         return customerMapper.toFullResponse(customer, accounts);
     }
 }

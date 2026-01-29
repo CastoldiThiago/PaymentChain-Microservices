@@ -10,7 +10,7 @@ public class AccountResponse {
     private String iban;
     private BigDecimal balance;
     private Long customerId;
-
+    private String currency;
     private String productName;
     private BigDecimal transactionFee;
 }

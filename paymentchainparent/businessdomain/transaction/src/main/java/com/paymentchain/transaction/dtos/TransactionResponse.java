@@ -9,7 +9,7 @@ import java.time.LocalDateTime;
 public class TransactionResponse {
 
     private Long transactionId;
-    private String accountIban; // Solo el String, no el objeto Account entero
+    private String accountIban;
     private BigDecimal amount;
     private BigDecimal fee;
     private BigDecimal total;

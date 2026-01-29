@@ -1,0 +1,29 @@
+server:
+  port: 8090 # Puerto interno (distinto a los otros)
+
+spring:
+  application:
+    name: currency-exchange
+
+  # Configuración de Redis
+  data:
+    redis:
+      host: paymentchain-redis # Nombre del servicio en Docker Compose
+      port: 6379
+
+eureka:
+  client:
+    serviceUrl:
+      defaultZone: http://eureka-server:8761/eureka/
+    fetch-registry: true
+    register-with-eureka: true
+
+# Configuración de Resilience4j (El Cortacircuitos)
+resilience4j:
+  circuitbreaker:
+    instances:
+      externalApi:
+        registerHealthIndicator: true
+        slidingWindowSize: 10         # Analiza las últimas 10 peticiones
+        failureRateThreshold: 50      # Si el 50% falla, abre el circuito
+        waitDurationInOpenState: 10s  # Espera 10s antes de volver a intentar

@@ -10,4 +10,5 @@ public class AccountDto {
     private String iban;
     private BigDecimal balance;
     private String productName;
+    private String currency;
 }

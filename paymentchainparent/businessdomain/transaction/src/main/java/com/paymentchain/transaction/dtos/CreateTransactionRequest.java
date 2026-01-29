@@ -28,4 +28,8 @@ public class CreateTransactionRequest {
 
     @Schema(description = "Descripción o referencia del movimiento", example = "Pago de Alquiler de Enero")
     private String reference;
+
+    @NotNull
+    @Schema(description = "Moneda del pago original", example = "USD")
+    private String currency;
 }
