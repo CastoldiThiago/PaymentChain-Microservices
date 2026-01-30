@@ -3,3 +3,19 @@ mvn clean package -DskipTests
 # Launch the application with Docker Compose
 docker-compose up --build
 
+Post :  http://localhost:8080/customers
+{
+    "name":"Thiago",
+    "surname": "Castoldi",
+    "dni": "45869274",
+    "email": "castoldithiago4@gmail.com",
+    "phone": "115663456"
+}
+
+Post :  http://localhost:8080/transactions
+{
+    "accountIban": "AR1769751355549",
+    "amount": "1000",
+    "currency": "ARS",
+    "reference": "deposito"
+}
