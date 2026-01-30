@@ -1,0 +1,18 @@
+server:
+  port: 8888
+
+spring:
+  application:
+    name: config-server
+  cloud:
+    config:
+      server:
+        git:
+          # URI que apunta a una carpeta DENTRO del contenedor (que montaremos luego)
+          uri: file:///app/config-data
+          default-label: master # o 'main' dependiendo de tu versión de git local
+
+eureka:
+  client:
+    serviceUrl:
+      defaultZone: http://eureka-server:8761/eureka/

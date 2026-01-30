@@ -70,6 +70,36 @@ services:
     networks:
       - paymentchain-network
 
+  config-server:
+    image: paymentchain/config-server
+    build: ../../infraestructuradomain/config-server
+    container_name: config-server
+    ports:
+      - "8888:8888"
+    volumes:
+      # MAPEAMOS TU CARPETA LOCAL -> CARPETA INTERNA DEL CONTENEDOR
+      # Ajusta la ruta izquierda según dónde esté tu carpeta config-data
+      - ../../../config-data:/app/config-data
+    environment:
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka-server:8761/eureka/
+    depends_on:
+      - eureka-server
+    networks:
+      - paymentchain-network
+
+  springboot-admin:
+    image: paymentchain/springboot-admin
+    build: ../../infraestructuradomain/springboot-admin
+    container_name: springboot-admin
+    ports:
+      - "9090:9090"
+    environment:
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka-server:8761/eureka/
+    depends_on:
+      - eureka-server
+    networks:
+      - paymentchain-network
+
   api-gateway:
     image: paymentchain/api-gateway
     build: ../../infraestructuradomain/apigateway

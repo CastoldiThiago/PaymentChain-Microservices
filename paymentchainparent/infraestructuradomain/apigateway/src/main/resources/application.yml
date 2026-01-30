@@ -13,7 +13,7 @@ spring:
     oauth2:
       resourceserver:
         jwt:
-          issuer-uri: http://localhost:8180/realms/paymentchain-realm
+          issuer-uri: ${OAUTH2_ISSUER_URI:http://localhost:8180/realms/paymentchain-realm}
   cloud:
     config:
       enabled: false
@@ -38,12 +38,8 @@ spring:
               predicates:
                 - Path=/transactions/**, /accounts/**
 
-            - id: product-service
-              uri: lb://businessdomain-product
-              predicates:
-                - Path=/products/**
 
 eureka:
   client:
     service-url:
-      defaultZone: http://localhost:8761/eureka
+      defaultZone: http://eureka-server:8761/eureka/

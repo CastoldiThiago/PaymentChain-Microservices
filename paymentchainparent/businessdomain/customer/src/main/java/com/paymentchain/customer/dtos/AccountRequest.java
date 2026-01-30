@@ -8,11 +8,18 @@ import java.math.BigDecimal;
 
 @Data
 public class AccountRequest {
-    private String iban;
-    private BigDecimal balance;
-    private Long customerId;
-    private Long productId; // ID del producto (ej: 1 = Caja Ahorro)
     @NotNull
-    @Schema(description = "Moneda de la cuenta", example = "USD")
+    @Schema(description = "Account ID", example = "AR0001123")
+    private String iban;
+    @Schema(description = "Initial account balance", example = "1500.75")
+    private BigDecimal balance;
+    @NotNull
+    @Schema(description = "Customer number id", example = "1")
+    private Long customerId;
+    @NotNull
+    @Schema(description = "Product (account type) number id", example = "1")
+    private Long productId;
+    @NotNull
+    @Schema(description = "Account currency", example = "USD")
     private String currency;
 }
