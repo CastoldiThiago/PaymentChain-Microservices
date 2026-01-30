@@ -17,6 +17,7 @@
         <module>customer</module>
         <module>transaction</module>
         <module>currency-exchange</module>
+        <module>notification-service</module>
     </modules>
     
     
