@@ -179,9 +179,7 @@ public class TransactionService {
     }
 
     private void sendNotification(TransactionResponse transaction) {
-        log.info("🚀 Enviando evento a Kafka para la transacción: {}", transaction.getReference());
-        // Enviamos todo el objeto Transaction.
-        // Spring Boot lo convertirá a JSON automáticamente gracias a la config que hicimos.
+        log.info("🚀 Enviando evento a Kafka para notificar transacción: {}", transaction.getReference());
         kafkaTemplate.send("transaction-topic", transaction);
     }
 

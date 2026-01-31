@@ -36,4 +36,9 @@ public class TransactionResponse {
 
     @Schema(description = "Currency in which the transaction was performed", example = "ARS")
     private String currency;
+
+    @Schema(description = "Identifier of the customer owning the account", example = "1")
+    private Long customerId;
 }
+
+

@@ -17,4 +17,5 @@ public class TransactionResponse {
     private String reference;
     private String status;
     private String currency;
+    private Long customerId;
 }

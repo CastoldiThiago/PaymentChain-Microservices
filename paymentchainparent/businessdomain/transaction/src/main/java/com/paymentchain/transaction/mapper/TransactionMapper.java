@@ -16,6 +16,7 @@ public class TransactionMapper {
         // Validamos null por seguridad
         if (entity.getAccount() != null) {
             dto.setAccountIban(entity.getAccount().getIban());
+            dto.setCustomerId(entity.getAccount().getCustomerId());
         }
         dto.setAmount(entity.getAmount());
         dto.setFee(entity.getFee());

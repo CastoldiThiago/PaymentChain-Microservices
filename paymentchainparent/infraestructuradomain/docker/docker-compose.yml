@@ -173,6 +173,15 @@ services:
     networks:
       - paymentchain-network
 
+  mailhog:
+    image: mailhog/mailhog
+    container_name: mailhog
+    ports:
+      - "1025:1025" # Puerto SMTP
+      - "8025:8025" # Puerto Web
+    networks:
+      - paymentchain-network
+
   # ==========================================
   # 3. DOMINIO DE NEGOCIO (CLIENTES)
   # ==========================================
