@@ -23,6 +23,7 @@ public class TransactionMapper {
         dto.setDate(entity.getDate());
         dto.setReference(entity.getReference());
         dto.setStatus(entity.getStatus());
+        dto.setCurrency(entity.getCurrency());
         return dto;
     }
 

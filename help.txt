@@ -19,3 +19,11 @@ Post :  http://localhost:8080/transactions
     "currency": "ARS",
     "reference": "deposito"
 }
+Post :  http://localhost:8080/accounts
+{
+    "iban": "AR0002",
+    "balance": 1000,
+    "customerId": 1,
+    "productId": 1,
+    "currency": "ARS"
+}

@@ -4,16 +4,23 @@
  */
 package com.paymentchain.transaction.controller;
 
-import com.paymentchain.transaction.common.StandarizedApiExceptionResponse;
 import com.paymentchain.transaction.dtos.CreateTransactionRequest;
 import com.paymentchain.transaction.dtos.TransactionResponse;
 import com.paymentchain.transaction.dtos.TransferRequest;
 import com.paymentchain.transaction.entities.Transaction;
 import com.paymentchain.transaction.exception.BusinessRuleException;
 import com.paymentchain.transaction.mapper.TransactionMapper;
-import com.paymentchain.transaction.repository.TransactionRepository;
 import com.paymentchain.transaction.service.TransactionService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -23,61 +30,85 @@ import java.util.List;
 @RestController
 @RequestMapping("/transactions")
 @RequiredArgsConstructor
+@Tag(name = "Transactions", description = "Endpoints to create transactions and view transaction history")
 public class TransactionRestController {
 
     private final TransactionService transactionService;
-    private final TransactionRepository transactionRepository;
     private final TransactionMapper transactionMapper;
 
-    // POST /transactions - Ejecutar un movimiento
+    // NEW: List transactions (optional account filter)
+    @Operation(summary = "List transactions", description = "List all transactions or filter by account IBAN using query param 'accountIban'.")
+    @GetMapping
+    public ResponseEntity<Page<TransactionResponse>> list(@RequestParam(name = "accountIban", required = false) String accountIban,
+                                                           @Parameter(description = "Page request") Pageable pageable) {
+        if (accountIban != null && !accountIban.isEmpty()) {
+            Page<Transaction> page = transactionService.findByAccountIban(accountIban, pageable);
+            List<TransactionResponse> dtos = transactionMapper.toResponseList(page.getContent());
+            Page<TransactionResponse> dtoPage = new PageImpl<>(dtos, pageable, page.getTotalElements());
+            return ResponseEntity.ok(dtoPage);
+        } else {
+            Page<Transaction> page = transactionService.findAll(pageable);
+            List<TransactionResponse> dtos = transactionMapper.toResponseList(page.getContent());
+            Page<TransactionResponse> dtoPage = new PageImpl<>(dtos, pageable, page.getTotalElements());
+            return ResponseEntity.ok(dtoPage);
+        }
+    }
+
+    // NEW: Get transaction by id
+    @Operation(summary = "Get transaction by id")
+    @GetMapping("/{id}")
+    public ResponseEntity<TransactionResponse> getById(@PathVariable(name = "id") Long id) {
+        return transactionService.findById(id)
+                .map(transactionMapper::toResponse)
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
+    }
+
+    // POST /transactions - Execute a transaction (deposit/withdrawal)
+    @Operation(summary = "Create a transaction (deposit or withdrawal)", description = "Performs a single transaction on the specified account. Returns the created transaction details.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "201", description = "Transaction created successfully"),
+            @ApiResponse(responseCode = "400", description = "Bad request - validation failed"),
+            @ApiResponse(responseCode = "500", description = "Internal server error")
+    })
     @PostMapping
-    public ResponseEntity<?> performTransaction(@RequestBody CreateTransactionRequest request) {
-        try {
-            TransactionResponse transaction = transactionService.performTransaction(request);
-            return ResponseEntity.status(HttpStatus.CREATED).body(transaction);
-        } catch (BusinessRuleException ex) {
-
-            StandarizedApiExceptionResponse response = new StandarizedApiExceptionResponse(
-                    "/errors/business-rule",
-                    "Error de Validación de Negocio",
-                    ex.getCode(),
-                    ex.getMessage()
-            );
-
-            response.setInstance("/transactions");
-
-            return ResponseEntity.status(ex.getHttpStatus()).body(response);
-        }
+    public ResponseEntity<TransactionResponse> performTransaction(
+            @io.swagger.v3.oas.annotations.parameters.RequestBody(description = "Transaction request payload", required = true, content = @io.swagger.v3.oas.annotations.media.Content)
+            @Valid @RequestBody CreateTransactionRequest request) throws BusinessRuleException {
+        TransactionResponse transaction = transactionService.performTransaction(request);
+        return ResponseEntity.status(HttpStatus.CREATED).body(transaction);
     }
 
-    // GET /transactions/account/{iban} - Ver historial de una cuenta
+    // GET /transactions/account/{iban} - Get account transaction history
+    @Operation(summary = "Get transaction history for an account", description = "Returns a list of transactions for the given account IBAN.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "List of transactions returned"),
+            @ApiResponse(responseCode = "404", description = "Account not found")
+    })
     @GetMapping("/account/{iban}")
-    public ResponseEntity<List<TransactionResponse>> getHistory(@PathVariable(name="iban") String iban) {
+    public ResponseEntity<Page<TransactionResponse>> getHistory(
+            @Parameter(description = "IBAN of the account to fetch history for", required = true, example = "AR1769751355549")
+            @PathVariable(name = "iban") String iban,
+            @Parameter(description = "Page request") Pageable pageable) {
 
-        // 1. Buscamos las entidades "sucias" (con relaciones cíclicas) en la BD
-        List<Transaction> entities = transactionRepository.findByAccountIban(iban);
-
-        // 2. Las pasamos por el "filtro" del mapper para limpiarlas
-        List<TransactionResponse> dtos = transactionMapper.toResponseList(entities);
-
-        // 3. Devolvemos la lista limpia al Frontend
-        return ResponseEntity.ok(dtos);
+        Page<Transaction> page = transactionService.findByAccountIban(iban, pageable);
+        List<TransactionResponse> dtos = transactionMapper.toResponseList(page.getContent());
+        Page<TransactionResponse> dtoPage = new PageImpl<>(dtos, pageable, page.getTotalElements());
+        return ResponseEntity.ok(dtoPage);
     }
 
-    // Endpoint para Transferencias Internas
+    // POST /transactions/transfer - Internal transfer between two accounts
+    @Operation(summary = "Transfer between accounts", description = "Performs an internal transfer from one account to another.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Transfer completed successfully"),
+            @ApiResponse(responseCode = "400", description = "Bad request - validation failed"),
+            @ApiResponse(responseCode = "500", description = "Internal server error")
+    })
     @PostMapping("/transfer")
-    public ResponseEntity<?> transfer(@RequestBody TransferRequest request) {
-        try {
-            transactionService.transfer(request);
-            return ResponseEntity.ok().build(); // 200 OK si todo sale bien
-        } catch (BusinessRuleException ex) {
-            StandarizedApiExceptionResponse response = new StandarizedApiExceptionResponse(
-                    "/errors/transfer",
-                    "Error en Transferencia",
-                    ex.getCode(),
-                    ex.getMessage()
-            );
-            return ResponseEntity.status(ex.getHttpStatus()).body(response);
-        }
+    public ResponseEntity<Void> transfer(
+            @io.swagger.v3.oas.annotations.parameters.RequestBody(description = "Transfer request payload", required = true, content = @io.swagger.v3.oas.annotations.media.Content)
+            @Valid @RequestBody TransferRequest request) throws BusinessRuleException {
+        transactionService.transfer(request);
+        return ResponseEntity.ok().build(); // 200 OK if successful
     }
 }

@@ -8,6 +8,7 @@ import com.paymentchain.customer.entities.Customer;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Component
 public class CustomerMapper {
@@ -23,7 +24,7 @@ public class CustomerMapper {
         return customer;
     }
 
-    // Entity -> Response (DTO Simple)
+    // Entity -> Response (DTO Simple) with IBAN
     public CustomerResponse toResponse(Customer entity, String iban) {
         CustomerResponse dto = new CustomerResponse();
         dto.setCustomerId(entity.getId());
@@ -35,6 +36,21 @@ public class CustomerMapper {
         dto.setAssignedIban(iban);
 
         return dto;
+    }
+
+    // Entity -> Response (DTO Simple) without IBAN
+    public CustomerResponse toResponse(Customer entity) {
+        CustomerResponse dto = new CustomerResponse();
+        dto.setCustomerId(entity.getId());
+        dto.setName(entity.getName());
+        dto.setSurname(entity.getSurname());
+        dto.setDni(entity.getDni());
+        dto.setStatus(entity.getStatus());
+        return dto;
+    }
+
+    public List<CustomerResponse> toResponseList(List<Customer> entities) {
+        return entities.stream().map(this::toResponse).collect(Collectors.toList());
     }
 
     // Entity + Lista Cuentas -> Full Response (DTO Completo)

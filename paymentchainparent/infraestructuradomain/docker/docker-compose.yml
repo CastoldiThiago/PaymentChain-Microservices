@@ -78,8 +78,6 @@ services:
       interval: 10s
       timeout: 5s
       retries: 6
-    volumes:
-      - ../../config-data:/app/config-data
     environment:
       - EUREKA_CLIENT_REGISTER_WITH_EUREKA=false
       - EUREKA_CLIENT_FETCH_REGISTRY=false
@@ -132,6 +130,7 @@ services:
     environment:
       - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka-server:8761/eureka/
       - SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK_SET_URI=http://paymentchain-keycloak:8080/realms/paymentchain-realm/protocol/openid-connect/certs
+      - SWAGGER_DEBUG_ALLOW_ALL=true
     depends_on:
       eureka-server:
         condition: service_healthy

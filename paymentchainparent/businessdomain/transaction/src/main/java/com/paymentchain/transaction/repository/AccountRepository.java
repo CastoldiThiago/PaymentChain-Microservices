@@ -6,6 +6,8 @@ package com.paymentchain.transaction.repository;
 
 import com.paymentchain.transaction.entities.Account;
 import jakarta.persistence.LockModeType;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
@@ -29,4 +31,7 @@ public interface AccountRepository extends JpaRepository<Account, Long> {
     Optional<Account> findByIbanForUpdate(@Param("iban") String iban);
 
     List<Account> findByCustomerId(Long id);
+
+    // Pageable overload
+    Page<Account> findByCustomerId(Long id, Pageable pageable);
 }

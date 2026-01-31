@@ -8,9 +8,8 @@ spring:
     config:
       server:
         git:
-          # URI que apunta a una carpeta DENTRO del contenedor (que montaremos luego)
-          uri: file:///app/config-data
-          default-label: master # o 'main' dependiendo de tu versión de git local
+          uri: https://github.com/CastoldiThiago/config-data-paymentchain.git
+          default-label: master
 
 eureka:
   client:
