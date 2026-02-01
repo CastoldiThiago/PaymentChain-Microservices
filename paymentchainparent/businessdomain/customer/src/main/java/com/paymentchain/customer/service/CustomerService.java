@@ -27,6 +27,14 @@ public class CustomerService {
 
     public CustomerResponse createCustomerWithAccount(Customer customer) {
 
+        // Pre-insert validations: prevent duplicate email/dni with a clear 409
+        if (customer.getEmail() != null && customerRepository.existsByEmail(customer.getEmail())) {
+            throw new com.paymentchain.customer.exception.DuplicateResourceException("email", "Email already exists");
+        }
+        if (customer.getDni() != null && customerRepository.existsByDni(customer.getDni())) {
+            throw new com.paymentchain.customer.exception.DuplicateResourceException("dni", "DNI already exists");
+        }
+
         // 1. Guardar Cliente
         customer.setStatus("CREATED");
         Customer savedCustomer = customerRepository.save(customer);

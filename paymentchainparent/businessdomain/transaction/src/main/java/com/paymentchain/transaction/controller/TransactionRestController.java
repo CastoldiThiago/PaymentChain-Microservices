@@ -11,6 +11,7 @@ import com.paymentchain.transaction.entities.Transaction;
 import com.paymentchain.transaction.exception.BusinessRuleException;
 import com.paymentchain.transaction.mapper.TransactionMapper;
 import com.paymentchain.transaction.service.TransactionService;
+import com.paymentchain.transaction.util.SortUtils;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -19,13 +20,13 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
 
 @RestController
 @RequestMapping("/transactions")
@@ -40,18 +41,21 @@ public class TransactionRestController {
     @Operation(summary = "List transactions", description = "List all transactions or filter by account IBAN using query param 'accountIban'.")
     @GetMapping
     public ResponseEntity<Page<TransactionResponse>> list(@RequestParam(name = "accountIban", required = false) String accountIban,
-                                                           @Parameter(description = "Page request") Pageable pageable) {
-        if (accountIban != null && !accountIban.isEmpty()) {
-            Page<Transaction> page = transactionService.findByAccountIban(accountIban, pageable);
-            List<TransactionResponse> dtos = transactionMapper.toResponseList(page.getContent());
-            Page<TransactionResponse> dtoPage = new PageImpl<>(dtos, pageable, page.getTotalElements());
-            return ResponseEntity.ok(dtoPage);
-        } else {
-            Page<Transaction> page = transactionService.findAll(pageable);
-            List<TransactionResponse> dtos = transactionMapper.toResponseList(page.getContent());
-            Page<TransactionResponse> dtoPage = new PageImpl<>(dtos, pageable, page.getTotalElements());
-            return ResponseEntity.ok(dtoPage);
-        }
+                                                           @Parameter(description = "Page request") @PageableDefault(page = 0, size = 20, sort = "date", direction = Sort.Direction.DESC) Pageable pageable,
+                                                           @RequestParam(name = "sort", required = false) String[] sortParams) {
+        // If client used sort[] or sort params, collect them; else use provided sortParams array
+        String[] computedSortParams = sortParams;
+        // if caller passed 'sort' variants via query, Spring maps them into request param map, handled earlier in AccountController; here we accept direct param
+        Sort defaultSort = Sort.by(Sort.Direction.DESC, "date");
+        Sort sort = SortUtils.parseSortParams(computedSortParams, java.util.Set.of("date","amount","reference","status"), defaultSort);
+        Pageable validated = PageRequest.of(pageable.getPageNumber(), Math.min(pageable.getPageSize(), 100), sort);
+
+        Page<Transaction> page = (accountIban != null && !accountIban.isEmpty())
+                ? transactionService.findByAccountIban(accountIban, validated)
+                : transactionService.findAll(validated);
+
+        Page<TransactionResponse> dtoPage = page.map(transactionMapper::toResponse);
+        return ResponseEntity.ok(dtoPage);
     }
 
     // NEW: Get transaction by id
@@ -89,11 +93,10 @@ public class TransactionRestController {
     public ResponseEntity<Page<TransactionResponse>> getHistory(
             @Parameter(description = "IBAN of the account to fetch history for", required = true, example = "AR1769751355549")
             @PathVariable(name = "iban") String iban,
-            @Parameter(description = "Page request") Pageable pageable) {
+            @Parameter(description = "Page request") @PageableDefault(page = 0, size = 20, sort = "date", direction = Sort.Direction.DESC) Pageable pageable) {
 
         Page<Transaction> page = transactionService.findByAccountIban(iban, pageable);
-        List<TransactionResponse> dtos = transactionMapper.toResponseList(page.getContent());
-        Page<TransactionResponse> dtoPage = new PageImpl<>(dtos, pageable, page.getTotalElements());
+        Page<TransactionResponse> dtoPage = page.map(transactionMapper::toResponse);
         return ResponseEntity.ok(dtoPage);
     }
 

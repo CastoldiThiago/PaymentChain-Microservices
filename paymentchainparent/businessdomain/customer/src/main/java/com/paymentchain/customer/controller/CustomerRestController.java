@@ -11,20 +11,19 @@ import com.paymentchain.customer.entities.Customer;
 import com.paymentchain.customer.mapper.CustomerMapper;
 import com.paymentchain.customer.service.CustomerService;
 import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.tags.Tag;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
-import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
 
 @RestController
 @RequestMapping("/customers")
@@ -53,11 +52,9 @@ public class CustomerRestController {
 
     @Operation(summary = "List customers with pagination")
     @GetMapping
-    public ResponseEntity<Page<CustomerResponse>> listAll(@Parameter(description = "Page request") Pageable pageable) {
+    public ResponseEntity<Page<CustomerResponse>> listAll(@Parameter(description = "Page request") @PageableDefault(page = 0, size = 20, sort = "id", direction = Sort.Direction.ASC) Pageable pageable) {
         Page<com.paymentchain.customer.entities.Customer> page = customerService.findAll(pageable);
-        // Map entities to DTOs
-        List<CustomerResponse> dtos = customerMapper.toResponseList(page.getContent());
-        Page<CustomerResponse> dtoPage = new PageImpl<>(dtos, pageable, page.getTotalElements());
+        Page<CustomerResponse> dtoPage = page.map(customerMapper::toResponse);
         return ResponseEntity.ok(dtoPage);
     }
 

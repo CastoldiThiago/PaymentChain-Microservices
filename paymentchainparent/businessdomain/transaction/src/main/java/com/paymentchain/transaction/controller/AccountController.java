@@ -9,19 +9,22 @@ import com.paymentchain.transaction.dtos.CreateAccountRequest;
 import com.paymentchain.transaction.entities.Account;
 import com.paymentchain.transaction.mapper.AccountMapper;
 import com.paymentchain.transaction.service.AccountService;
+import com.paymentchain.transaction.util.SortUtils;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
+import java.util.Map;
 
 /**
  *
@@ -69,25 +72,25 @@ public class AccountController {
 
     @Operation(summary = "List accounts by customer id (paginated)")
     @GetMapping("/customer/{customerId}")
-    public ResponseEntity<Page<AccountResponse>> getByCustomerId(@PathVariable(name = "customerId") Long customerId, @Parameter(description = "Page request") Pageable pageable) {
-
-        // 1. Buscar Entidades paginadas
-        Page<com.paymentchain.transaction.entities.Account> page = accountService.findByCustomerId(customerId, pageable);
-
-        // 2. Convertir a DTOs usando el Mapper existente
-        List<AccountResponse> dtos = accountMapper.toResponseList(page.getContent());
-
-        // 3. Responder como Page
-        Page<AccountResponse> dtoPage = new PageImpl<>(dtos, pageable, page.getTotalElements());
-        return ResponseEntity.ok(dtoPage);
+    public ResponseEntity<java.util.List<AccountResponse>> getByCustomerId(@PathVariable(name = "customerId") Long customerId) {
+        java.util.List<com.paymentchain.transaction.entities.Account> accounts = accountService.findByCustomerId(customerId);
+        java.util.List<AccountResponse> dtos = accountMapper.toResponseList(accounts);
+        return ResponseEntity.ok(dtos);
     }
 
     @Operation(summary = "List all accounts (paginated)")
     @GetMapping
-    public ResponseEntity<Page<AccountResponse>> listAll(@Parameter(description = "Page request") Pageable pageable) {
-        Page<com.paymentchain.transaction.entities.Account> page = accountService.findAll(pageable);
-        List<AccountResponse> dtos = accountMapper.toResponseList(page.getContent());
-        Page<AccountResponse> dtoPage = new PageImpl<>(dtos, pageable, page.getTotalElements());
+    public ResponseEntity<Page<AccountResponse>> listAll(@Parameter(description = "Page request") @PageableDefault(page = 0, size = 20, sort = "iban", direction = Sort.Direction.ASC) Pageable pageable, @RequestParam Map<String, String[]> allRequestParams) {
+        String[] sortParams = allRequestParams.entrySet().stream()
+                .filter(e -> e.getKey() != null && e.getKey().toLowerCase().startsWith("sort"))
+                .flatMap(e -> java.util.Arrays.stream(e.getValue()))
+                .toArray(String[]::new);
+        Sort defaultSort = Sort.by(Sort.Direction.ASC, "iban");
+        Sort sort = SortUtils.parseSortParams(sortParams, java.util.Set.of("iban","balance","customerId","currency"), defaultSort);
+        Pageable validated = PageRequest.of(pageable.getPageNumber(), Math.min(pageable.getPageSize(), 100), sort);
+
+        Page<com.paymentchain.transaction.entities.Account> page = accountService.findAll(validated);
+        Page<AccountResponse> dtoPage = page.map(accountMapper::toResponse);
         return ResponseEntity.ok(dtoPage);
     }
 }

@@ -45,6 +45,11 @@ public class AccountService {
         AccountProduct product = productRepository.findById(request.getProductId()).orElse(null);
         if (product == null) throw new RuntimeException("Product not found");
 
+        // Prevent duplicate IBANs early with a clear 409 response
+        if (request.getIban() != null && accountRepository.existsByIban(request.getIban())) {
+            throw new com.paymentchain.transaction.exception.DuplicateResourceException("iban", "IBAN already exists");
+        }
+
         Account account = new Account();
         account.setIban(request.getIban());
         account.setBalance(request.getBalance());
