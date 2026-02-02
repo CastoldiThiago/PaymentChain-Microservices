@@ -3,19 +3,22 @@ import {
   Account,
   CreateAccountRequest,
   createAccount,
-  deleteAccount,
   getAccounts,
   getAccountsByCustomer,
   updateAccount,
 } from '../services/account.service';
 import { CURRENCIES } from '../constants';
+import { useNotification } from '../context/NotificationContext';
+import { getErrorMessage } from '../utils/errorHandler';
 
 export const Accounts: React.FC = () => {
+  const { showSuccess, showError, showWarning } = useNotification();
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [page, setPage] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
   const [totalElements, setTotalElements] = useState(0);
   const [customerFilter, setCustomerFilter] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [form, setForm] = useState({
     iban: '',
     balance: '',
@@ -27,21 +30,29 @@ export const Accounts: React.FC = () => {
   const loadAccounts = (pageNumber: number = 0) => {
     const customerId = customerFilter.trim();
     if (customerId) {
-      getAccountsByCustomer(customerId).then(res => {
-        setAccounts(res.data);
-        setPage(0);
-        setTotalPages(1);
-        setTotalElements(res.data.length);
-      });
+      getAccountsByCustomer(customerId)
+        .then(res => {
+          setAccounts(res.data);
+          setPage(0);
+          setTotalPages(1);
+          setTotalElements(res.data.length);
+        })
+        .catch(error => {
+          showError(`Failed to load accounts: ${getErrorMessage(error)}`);
+        });
       return;
     }
 
-    getAccounts({ page: pageNumber, size: 10 }).then(res => {
-      setAccounts(res.data.content);
-      setPage(res.data.number);
-      setTotalPages(res.data.totalPages);
-      setTotalElements(res.data.totalElements);
-    });
+    getAccounts({ page: pageNumber, size: 10 })
+      .then(res => {
+        setAccounts(res.data.content);
+        setPage(res.data.number);
+        setTotalPages(res.data.totalPages);
+        setTotalElements(res.data.totalElements);
+      })
+      .catch(error => {
+        showError(`Failed to load accounts: ${getErrorMessage(error)}`);
+      });
   };
 
   useEffect(() => {
@@ -66,23 +77,60 @@ export const Accounts: React.FC = () => {
 
   const handleCreate = (e: React.FormEvent) => {
     e.preventDefault();
-    createAccount(buildPayload()).then(() => {
-      loadAccounts(page);
-      resetForm();
-    });
+    if (isSubmitting) return;
+    
+    setIsSubmitting(true);
+    createAccount(buildPayload())
+      .then(() => {
+        showSuccess('Account created successfully!');
+        loadAccounts(page);
+        resetForm();
+      })
+      .catch(error => {
+        const errorMsg = getErrorMessage(error);
+        if (errorMsg.toLowerCase().includes('accountproduct')) {
+          showError(`Account Product not found: ${errorMsg}`);
+        } else if (errorMsg.toLowerCase().includes('customer')) {
+          showError(`Customer error: ${errorMsg}`);
+        } else if (errorMsg.toLowerCase().includes('iban') || errorMsg.toLowerCase().includes('already exists')) {
+          showError(`IBAN error: ${errorMsg}`);
+        } else {
+          showError(errorMsg);
+        }
+      })
+      .finally(() => {
+        setIsSubmitting(false);
+      });
   };
 
   const handleUpdate = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.iban.trim()) return;
-    updateAccount(form.iban.trim(), buildPayload()).then(() => {
-      loadAccounts(page);
-      resetForm();
-    });
-  };
-
-  const handleDelete = (iban: string) => {
-    deleteAccount(iban).then(() => loadAccounts(page));
+    if (!form.iban.trim()) {
+      showWarning('Please enter an IBAN to update');
+      return;
+    }
+    if (isSubmitting) return;
+    
+    setIsSubmitting(true);
+    updateAccount(form.iban.trim(), buildPayload())
+      .then(() => {
+        showSuccess('Account updated successfully!');
+        loadAccounts(page);
+        resetForm();
+      })
+      .catch(error => {
+        const errorMsg = getErrorMessage(error);
+        if (errorMsg.toLowerCase().includes('not found')) {
+          showError('Account not found. Please verify the IBAN.');
+        } else if (errorMsg.toLowerCase().includes('product')) {
+          showError('Account Product not found. Please select a valid product ID.');
+        } else {
+          showError(`Failed to update account: ${errorMsg}`);
+        }
+      })
+      .finally(() => {
+        setIsSubmitting(false);
+      });
   };
 
   const handlePreviousPage = () => {
@@ -129,8 +177,12 @@ export const Accounts: React.FC = () => {
             </select>
           </div>
           <div className="form-actions">
-            <button type="submit" className="btn btn-primary">Create Account</button>
-            <button type="button" onClick={handleUpdate} className="btn btn-secondary">Update Account</button>
+            <button type="submit" className="btn btn-primary" disabled={isSubmitting}>
+              {isSubmitting ? 'Creating...' : 'Create Account'}
+            </button>
+            <button type="button" onClick={handleUpdate} className="btn btn-secondary" disabled={isSubmitting}>
+              {isSubmitting ? 'Updating...' : 'Update Account'}
+            </button>
           </div>
         </form>
       </div>
@@ -167,7 +219,6 @@ export const Accounts: React.FC = () => {
               <th>Currency</th>
               <th>Product</th>
               <th>Fee %</th>
-              <th>Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -180,9 +231,6 @@ export const Accounts: React.FC = () => {
                 <td>{a.currency}</td>
                 <td>{a.productName ?? '-'}</td>
                 <td>{a.transactionFee ? `${(a.transactionFee * 100).toFixed(2)}%` : '-'}</td>
-                <td>
-                  <button onClick={() => handleDelete(a.iban)} className="btn btn-danger btn-sm">Delete</button>
-                </td>
               </tr>
             ))}
           </tbody>

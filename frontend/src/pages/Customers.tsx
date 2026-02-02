@@ -1,20 +1,28 @@
 import React, { useEffect, useState } from 'react';
 import { getCustomers, createCustomer, Customer } from '../services/customer.service';
+import { useNotification } from '../context/NotificationContext';
+import { getErrorMessage } from '../utils/errorHandler';
 
 export const Customers: React.FC = () => {
+  const { showSuccess, showError } = useNotification();
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [page, setPage] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
   const [totalElements, setTotalElements] = useState(0);
   const [form, setForm] = useState({ name: '', surname: '', email: '', dni: '', phone: '' });
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const loadCustomers = (pageNumber: number = 0) => {
-    getCustomers({ page: pageNumber, size: 10 }).then(res => {
-      setCustomers(res.data.content);
-      setPage(res.data.number);
-      setTotalPages(res.data.totalPages);
-      setTotalElements(res.data.totalElements);
-    });
+    getCustomers({ page: pageNumber, size: 10 })
+      .then(res => {
+        setCustomers(res.data.content);
+        setPage(res.data.number);
+        setTotalPages(res.data.totalPages);
+        setTotalElements(res.data.totalElements);
+      })
+      .catch(error => {
+        showError(`Failed to load customers: ${getErrorMessage(error)}`);
+      });
   };
 
   useEffect(() => {
@@ -27,10 +35,21 @@ export const Customers: React.FC = () => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    createCustomer(form).then(() => {
-      loadCustomers(page);
-      setForm({ name: '', surname: '', email: '', dni: '', phone: '' });
-    });
+    if (isSubmitting) return;
+    
+    setIsSubmitting(true);
+    createCustomer(form)
+      .then(() => {
+        showSuccess('Customer created successfully!');
+        loadCustomers(page);
+        setForm({ name: '', surname: '', email: '', dni: '', phone: '' });
+      })
+      .catch(error => {
+        showError(getErrorMessage(error));
+      })
+      .finally(() => {
+        setIsSubmitting(false);
+      });
   };
 
   const handlePreviousPage = () => {
@@ -76,7 +95,9 @@ export const Customers: React.FC = () => {
             <input name="phone" value={form.phone} onChange={handleChange} placeholder="+1234567890" className="form-input" required />
           </div>
           <div className="form-actions">
-            <button type="submit" className="btn btn-primary">Create Customer</button>
+            <button type="submit" className="btn btn-primary" disabled={isSubmitting}>
+              {isSubmitting ? 'Creating...' : 'Create Customer'}
+            </button>
           </div>
         </form>
       </div>

@@ -4,13 +4,21 @@ import {
   createAccountProduct,
   getAccountProducts,
 } from '../services/accountProduct.service';
+import { useNotification } from '../context/NotificationContext';
+import { getErrorMessage } from '../utils/errorHandler';
 
 export const AccountProducts: React.FC = () => {
+  const { showSuccess, showError } = useNotification();
   const [products, setProducts] = useState<AccountProduct[]>([]);
   const [form, setForm] = useState({ name: '', transactionFeePercentage: '' });
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const loadProducts = () => {
-    getAccountProducts().then(res => setProducts(res.data));
+    getAccountProducts()
+      .then(res => setProducts(res.data))
+      .catch(error => {
+        showError(`Failed to load products: ${getErrorMessage(error)}`);
+      });
   };
 
   useEffect(() => {
@@ -23,13 +31,24 @@ export const AccountProducts: React.FC = () => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSubmitting) return;
+    
+    setIsSubmitting(true);
     createAccountProduct({
       name: form.name.trim(),
       transactionFeePercentage: Number(form.transactionFeePercentage),
-    }).then(() => {
-      setForm({ name: '', transactionFeePercentage: '' });
-      loadProducts();
-    });
+    })
+      .then(() => {
+        showSuccess('Account Product created successfully!');
+        setForm({ name: '', transactionFeePercentage: '' });
+        loadProducts();
+      })
+      .catch(error => {
+        showError(getErrorMessage(error));
+      })
+      .finally(() => {
+        setIsSubmitting(false);
+      });
   };
 
   return (
@@ -60,7 +79,9 @@ export const AccountProducts: React.FC = () => {
             />
           </div>
           <div className="form-actions">
-            <button type="submit" className="btn btn-primary">Create Product</button>
+            <button type="submit" className="btn btn-primary" disabled={isSubmitting}>
+              {isSubmitting ? 'Creating...' : 'Create Product'}
+            </button>
           </div>
         </form>
       </div>

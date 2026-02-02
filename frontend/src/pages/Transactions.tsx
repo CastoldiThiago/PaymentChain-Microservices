@@ -8,13 +8,18 @@ import {
   transferTransaction,
 } from '../services/transaction.service';
 import { CURRENCIES } from '../constants';
+import { useNotification } from '../context/NotificationContext';
+import { getErrorMessage } from '../utils/errorHandler';
 
 export const Transactions: React.FC = () => {
+  const { showSuccess, showError } = useNotification();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [page, setPage] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
   const [totalElements, setTotalElements] = useState(0);
   const [accountFilter, setAccountFilter] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isTransferring, setIsTransferring] = useState(false);
 
   const [form, setForm] = useState({
     accountIban: '',
@@ -38,12 +43,16 @@ export const Transactions: React.FC = () => {
       ...(accountFilter.trim() ? { accountIban: accountFilter.trim() } : {}),
     };
 
-    listTransactions(params).then(res => {
-      setTransactions(res.data.content);
-      setPage(res.data.number);
-      setTotalPages(res.data.totalPages);
-      setTotalElements(res.data.totalElements);
-    });
+    listTransactions(params)
+      .then(res => {
+        setTransactions(res.data.content);
+        setPage(res.data.number);
+        setTotalPages(res.data.totalPages);
+        setTotalElements(res.data.totalElements);
+      })
+      .catch(error => {
+        showError(`Failed to load transactions: ${getErrorMessage(error)}`);
+      });
   };
 
   useEffect(() => {
@@ -60,6 +69,8 @@ export const Transactions: React.FC = () => {
 
   const handleCreate = (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSubmitting) return;
+    
     const payload: CreateTransactionRequest = {
       accountIban: form.accountIban.trim(),
       amount: Number(form.amount),
@@ -67,24 +78,48 @@ export const Transactions: React.FC = () => {
       currency: form.currency.trim(),
       type: form.type as CreateTransactionRequest['type'],
     };
-    createTransaction(payload).then(() => {
-      setForm({ accountIban: '', amount: '', reference: '', currency: 'USD', type: 'DEPOSIT' });
-      loadTransactions(page);
-    });
+    
+    setIsSubmitting(true);
+    createTransaction(payload)
+      .then(() => {
+        showSuccess(`${form.type === 'DEPOSIT' ? 'Deposit' : 'Withdrawal'} completed successfully!`);
+        setForm({ accountIban: '', amount: '', reference: '', currency: 'USD', type: 'DEPOSIT' });
+        loadTransactions(page);
+      })
+      .catch(error => {
+        const errorMsg = getErrorMessage(error);
+        showError(errorMsg);
+      })
+      .finally(() => {
+        setIsSubmitting(false);
+      });
   };
 
   const handleTransfer = (e: React.FormEvent) => {
     e.preventDefault();
+    if (isTransferring) return;
+    
     const payload: TransferRequest = {
       sourceIban: transferForm.sourceIban.trim(),
       targetIban: transferForm.targetIban.trim(),
       amount: Number(transferForm.amount),
       reference: transferForm.reference.trim() || undefined,
     };
-    transferTransaction(payload).then(() => {
-      setTransferForm({ sourceIban: '', targetIban: '', amount: '', reference: '' });
-      loadTransactions(page);
-    });
+    
+    setIsTransferring(true);
+    transferTransaction(payload)
+      .then(() => {
+        showSuccess('Transfer completed successfully!');
+        setTransferForm({ sourceIban: '', targetIban: '', amount: '', reference: '' });
+        loadTransactions(page);
+      })
+      .catch(error => {
+        const errorMsg = getErrorMessage(error);
+        showError(errorMsg);
+      })
+      .finally(() => {
+        setIsTransferring(false);
+      });
   };
 
   const handlePreviousPage = () => {
@@ -135,7 +170,9 @@ export const Transactions: React.FC = () => {
               </select>
             </div>
             <div className="form-actions">
-              <button type="submit" className="btn btn-primary">Execute Transaction</button>
+              <button type="submit" className="btn btn-primary" disabled={isSubmitting}>
+                {isSubmitting ? 'Processing...' : 'Execute Transaction'}
+              </button>
             </div>
           </form>
         </div>
@@ -160,7 +197,9 @@ export const Transactions: React.FC = () => {
               <input name="reference" value={transferForm.reference} onChange={handleTransferChange} placeholder="Birthday gift" className="form-input" />
             </div>
             <div className="form-actions">
-              <button type="submit" className="btn btn-primary">Transfer Funds</button>
+              <button type="submit" className="btn btn-primary" disabled={isTransferring}>
+                {isTransferring ? 'Processing...' : 'Transfer Funds'}
+              </button>
             </div>
           </form>
         </div>
