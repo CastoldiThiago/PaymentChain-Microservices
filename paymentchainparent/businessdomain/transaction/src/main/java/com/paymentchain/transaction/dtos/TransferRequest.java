@@ -8,22 +8,22 @@ import lombok.Data;
 import java.math.BigDecimal;
 
 @Data
-@Schema(description = "Objeto utilizado para realizar transferencias entre dos cuentas internas")
+@Schema(description = "Request object for transferring money between two accounts")
 public class TransferRequest {
 
     @NotNull
-    @Schema(description = "IBAN de la cuenta de origen (quien envía el dinero)", example = "AR0001", requiredMode = Schema.RequiredMode.REQUIRED)
+    @Schema(description = "Source Account IBAN (who send money)", example = "AR0001", requiredMode = Schema.RequiredMode.REQUIRED)
     private String sourceIban;
 
     @NotNull
-    @Schema(description = "IBAN de la cuenta de destino (quien recibe el dinero)", example = "AR0002", requiredMode = Schema.RequiredMode.REQUIRED)
+    @Schema(description = "Target account IBAN (who receive money)", example = "AR0002", requiredMode = Schema.RequiredMode.REQUIRED)
     private String targetIban;
 
     @NotNull
-    @Min(value = 1, message = "El monto de transferencia debe ser mayor a 0")
-    @Schema(description = "Monto a transferir (Debe ser positivo)", example = "500.00", requiredMode = Schema.RequiredMode.REQUIRED)
+    @Min(value = 1, message = "Amount to transfer, must be positive")
+    @Schema(description = "Transfer amount, always positive", example = "500.00", requiredMode = Schema.RequiredMode.REQUIRED)
     private BigDecimal amount;
 
-    @Schema(description = "Referencia o concepto de la transferencia", example = "Regalo de cumpleaños")
+    @Schema(description = "Reference or description of the transaction", example = "Birthday gift")
     private String reference;
 }

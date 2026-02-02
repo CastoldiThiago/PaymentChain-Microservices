@@ -1,0 +1,45 @@
+spring:
+  application:
+    name: businessdomain-transaction
+
+  cloud:
+    config:
+      enabled: false
+      discovery:
+        enabled: false
+
+  datasource:
+    driver-class-name: org.postgresql.Driver
+    url: jdbc:postgresql://localhost:5432/test_db
+    username: test
+    password: test
+
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: true
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+
+  # 👇 AQUÍ ESTÁ LA CORRECCIÓN
+  kafka:
+    bootstrap-servers: localhost:9092 # (Esto se sobrescribe por Testcontainers, pero dejalo de placeholder)
+    consumer:
+      group-id: test-group
+      auto-offset-reset: earliest
+      # El consumidor de test lee Strings o JSON según configuramos en el test
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      properties:
+        spring.json.trusted.packages: "*"
+
+    producer:
+      # La clave sigue siendo String
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      # 👇 EL VALOR DEBE SER JSON (Para que Jackson convierta tu Objeto a Texto)
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+
+eureka:
+  client:
+    enabled: false

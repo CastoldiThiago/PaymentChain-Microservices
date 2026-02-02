@@ -1,5 +1,7 @@
 package com.paymentchain.transaction.dtos;
 
+import com.paymentchain.transaction.enums.TransactionStatus;
+import com.paymentchain.transaction.enums.TransactionType;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 
@@ -16,7 +18,7 @@ public class TransactionResponse {
     @Schema(description = "Account IBAN affected by the transaction", example = "AR1769751355549")
     private String accountIban;
 
-    @Schema(description = "Amount (signed). Positive for credit, negative for debit", example = "1000.00")
+    @Schema(description = "Amount. only positive", example = "1000.00")
     private BigDecimal amount;
 
     @Schema(description = "Applied transaction fee", example = "5.00")
@@ -32,13 +34,16 @@ public class TransactionResponse {
     private String reference;
 
     @Schema(description = "Transaction status", example = "COMPLETED")
-    private String status;
+    private TransactionStatus status;
 
     @Schema(description = "Currency in which the transaction was performed", example = "ARS")
     private String currency;
 
     @Schema(description = "Identifier of the customer owning the account", example = "1")
     private Long customerId;
+
+    @Schema(description = "Type of transaction: DEPOSIT or WITHDRAWAL", example = "DEPOSIT")
+    private TransactionType type;
 }
 
 

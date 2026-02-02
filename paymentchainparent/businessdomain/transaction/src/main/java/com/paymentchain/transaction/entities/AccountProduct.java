@@ -19,4 +19,5 @@ public class AccountProduct {
 
     // Configuración: Porcentaje de comisión (0.01 = 1%)
     private BigDecimal transactionFeePercentage;
+
 }

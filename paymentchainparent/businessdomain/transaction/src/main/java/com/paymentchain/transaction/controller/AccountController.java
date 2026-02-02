@@ -24,6 +24,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -70,11 +71,11 @@ public class AccountController {
         return ResponseEntity.noContent().build();
     }
 
-    @Operation(summary = "List accounts by customer id (paginated)")
+    @Operation(summary = "List accounts by customer id")
     @GetMapping("/customer/{customerId}")
-    public ResponseEntity<java.util.List<AccountResponse>> getByCustomerId(@PathVariable(name = "customerId") Long customerId) {
-        java.util.List<com.paymentchain.transaction.entities.Account> accounts = accountService.findByCustomerId(customerId);
-        java.util.List<AccountResponse> dtos = accountMapper.toResponseList(accounts);
+    public ResponseEntity<List<AccountResponse>> getByCustomerId(@PathVariable(name = "customerId") Long customerId) {
+        List<Account> accounts = accountService.findByCustomerId(customerId);
+        List<AccountResponse> dtos = accountMapper.toResponseList(accounts);
         return ResponseEntity.ok(dtos);
     }
 
@@ -89,7 +90,7 @@ public class AccountController {
         Sort sort = SortUtils.parseSortParams(sortParams, java.util.Set.of("iban","balance","customerId","currency"), defaultSort);
         Pageable validated = PageRequest.of(pageable.getPageNumber(), Math.min(pageable.getPageSize(), 100), sort);
 
-        Page<com.paymentchain.transaction.entities.Account> page = accountService.findAll(validated);
+        Page<Account> page = accountService.findAll(validated);
         Page<AccountResponse> dtoPage = page.map(accountMapper::toResponse);
         return ResponseEntity.ok(dtoPage);
     }

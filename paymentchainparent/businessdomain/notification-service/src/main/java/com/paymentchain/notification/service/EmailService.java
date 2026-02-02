@@ -36,6 +36,7 @@ public class EmailService {
     private String buildBody(TransactionResponse tx) {
         StringBuilder sb = new StringBuilder();
         sb.append("Reference: ").append(safe(tx.getReference())).append('\n');
+        sb.append("Transaction Type: ").append(safe(tx.getType())).append('\n');
         sb.append("Account IBAN: ").append(safe(tx.getAccountIban())).append('\n');
         sb.append("Amount: ").append(safe(tx.getAmount())).append('\n');
         sb.append("Fee: ").append(safe(tx.getFee())).append('\n');

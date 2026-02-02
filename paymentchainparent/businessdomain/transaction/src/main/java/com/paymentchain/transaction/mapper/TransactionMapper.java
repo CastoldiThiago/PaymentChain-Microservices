@@ -13,7 +13,7 @@ public class TransactionMapper {
     public TransactionResponse toResponse(Transaction entity) {
         TransactionResponse dto = new TransactionResponse();
         dto.setTransactionId(entity.getId());
-        // Validamos null por seguridad
+
         if (entity.getAccount() != null) {
             dto.setAccountIban(entity.getAccount().getIban());
             dto.setCustomerId(entity.getAccount().getCustomerId());
@@ -25,6 +25,7 @@ public class TransactionMapper {
         dto.setReference(entity.getReference());
         dto.setStatus(entity.getStatus());
         dto.setCurrency(entity.getCurrency());
+        dto.setType(entity.getType());
         return dto;
     }
 

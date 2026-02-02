@@ -59,7 +59,7 @@ public class CurrencyService {
 
         // En un caso real, podrías buscar en una tabla de BD histórica.
         // Para el demo, devolvemos una tasa fija o simulada.
-        if ("USD".equalsIgnoreCase(from) && "ARS".equalsIgnoreCase(to)) return new BigDecimal("1000");
+        if ("USD".equalsIgnoreCase(from) && "ARS".equalsIgnoreCase(to)) return new BigDecimal("1400");
         if ("EUR".equalsIgnoreCase(from) && "ARS".equalsIgnoreCase(to)) return new BigDecimal("1100");
 
         return BigDecimal.ONE;

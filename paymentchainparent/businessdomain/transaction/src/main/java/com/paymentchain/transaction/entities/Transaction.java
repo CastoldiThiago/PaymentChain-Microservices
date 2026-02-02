@@ -4,6 +4,8 @@
  */
 package com.paymentchain.transaction.entities;
 
+import com.paymentchain.transaction.enums.TransactionStatus;
+import com.paymentchain.transaction.enums.TransactionType;
 import jakarta.persistence.*;
 import lombok.Data;
 
@@ -23,14 +25,15 @@ public class Transaction {
     private LocalDateTime date;
     private String reference;
 
-    private BigDecimal amount; // Monto original
-    private BigDecimal fee;    // Comisión cobrada
-    private BigDecimal total;  // Monto + Comisión (lo que se descontó)
+    private BigDecimal amount;
+    private BigDecimal fee;
+    private BigDecimal total;
 
-    private String status; // PENDING, COMPLETED, REJECTED
+    private TransactionStatus status; // PENDING, COMPLETED, REJECTED
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "account_id")
     private Account account;
-    private String currency; // Moneda en la que se realizó la transacción
+    private String currency;
+    private TransactionType type; // DEPOSIT, WITHDRAWAL
 }

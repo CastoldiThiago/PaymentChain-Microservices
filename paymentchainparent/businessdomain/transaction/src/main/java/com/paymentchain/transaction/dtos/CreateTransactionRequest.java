@@ -4,6 +4,7 @@
  */
 package com.paymentchain.transaction.dtos;
 
+import com.paymentchain.transaction.enums.TransactionType;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
@@ -15,21 +16,25 @@ import java.math.BigDecimal;
  * @author casto
  */
 @Data
-@Schema(description = "Objeto utilizado para crear una nueva transacción (Depósito o Extracción)")
+@Schema(description = "Request object for creating a new transaction: deposit or withdrawal")
 public class CreateTransactionRequest {
 
     @NotNull
-    @Schema(description = "El IBAN único de la cuenta donde impactará el movimiento", example = "AR0001", requiredMode = Schema.RequiredMode.REQUIRED)
+    @Schema(description = "Unique IBAN of the account in which transaction will impact", example = "AR0001", requiredMode = Schema.RequiredMode.REQUIRED)
     private String accountIban;
 
     @NotNull
-    @Schema(description = "El monto a procesar. Positivo (+) para Depósito, Negativo (-) para Extracción", example = "100.00", requiredMode = Schema.RequiredMode.REQUIRED)
+    @Schema(description = "Amount to process, only positive", example = "100.00", requiredMode = Schema.RequiredMode.REQUIRED)
     private BigDecimal amount;
 
-    @Schema(description = "Descripción o referencia del movimiento", example = "Pago de Alquiler de Enero")
+    @Schema(description = "movement description or reference", example = "Salary payment")
     private String reference;
 
     @NotNull
-    @Schema(description = "Moneda del pago original", example = "USD")
+    @Schema(description = "Original payment currency", example = "USD")
     private String currency;
+
+    @NotNull
+    @Schema(description = "Transaction type: DEPOSIT o WITHDRAWAL", example = "DEPOSIT", requiredMode = Schema.RequiredMode.REQUIRED)
+    private TransactionType type;
 }

@@ -3,6 +3,7 @@ package com.paymentchain.transaction.service;
 import com.paymentchain.transaction.dtos.CreateAccountRequest;
 import com.paymentchain.transaction.entities.Account;
 import com.paymentchain.transaction.entities.AccountProduct;
+import com.paymentchain.transaction.exception.DuplicateResourceException;
 import com.paymentchain.transaction.repository.AccountProductRepository;
 import com.paymentchain.transaction.repository.AccountRepository;
 import jakarta.transaction.Transactional;
@@ -20,9 +21,6 @@ public class AccountService {
     private final AccountRepository accountRepository;
     private final AccountProductRepository productRepository;
 
-    public List<Account> findAll() {
-        return accountRepository.findAll();
-    }
 
     public Page<Account> findAll(Pageable pageable) {
         return accountRepository.findAll(pageable);
@@ -36,18 +34,14 @@ public class AccountService {
         return accountRepository.findByCustomerId(customerId);
     }
 
-    public Page<Account> findByCustomerId(Long customerId, Pageable pageable) {
-        return accountRepository.findByCustomerId(customerId, pageable);
-    }
 
     @Transactional
     public Account create(CreateAccountRequest request) {
         AccountProduct product = productRepository.findById(request.getProductId()).orElse(null);
         if (product == null) throw new RuntimeException("Product not found");
 
-        // Prevent duplicate IBANs early with a clear 409 response
         if (request.getIban() != null && accountRepository.existsByIban(request.getIban())) {
-            throw new com.paymentchain.transaction.exception.DuplicateResourceException("iban", "IBAN already exists");
+            throw new DuplicateResourceException("iban", "IBAN already exists");
         }
 
         Account account = new Account();

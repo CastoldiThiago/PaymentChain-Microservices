@@ -20,13 +20,15 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.Set;
 
 @RestController
 @RequestMapping("/transactions")
@@ -47,7 +49,7 @@ public class TransactionRestController {
         String[] computedSortParams = sortParams;
         // if caller passed 'sort' variants via query, Spring maps them into request param map, handled earlier in AccountController; here we accept direct param
         Sort defaultSort = Sort.by(Sort.Direction.DESC, "date");
-        Sort sort = SortUtils.parseSortParams(computedSortParams, java.util.Set.of("date","amount","reference","status"), defaultSort);
+        Sort sort = SortUtils.parseSortParams(computedSortParams, Set.of("date","amount","reference","status"), defaultSort);
         Pageable validated = PageRequest.of(pageable.getPageNumber(), Math.min(pageable.getPageSize(), 100), sort);
 
         Page<Transaction> page = (accountIban != null && !accountIban.isEmpty())

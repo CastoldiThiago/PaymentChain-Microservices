@@ -16,19 +16,19 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
  */
 @RestControllerAdvice
 public class ApiExceptionHandler {
-    
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<?> handleUnkknownHostException (Exception ex){
         StandarizedApiExceptionResponse standarizedApiExceptionResponse = new StandarizedApiExceptionResponse("TECNICO", "Input Output error", "1024", ex.getMessage());
-        
+
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(standarizedApiExceptionResponse);
     }
-    
+
     @ExceptionHandler(BusinessRuleException.class)
     public ResponseEntity<?> handleBusinessRuleException (BusinessRuleException ex){
         StandarizedApiExceptionResponse standarizedApiExceptionResponse = new StandarizedApiExceptionResponse("BUSINESS", "Error de validacion", ex.getCode(), ex.getMessage());
-        
+
         return ResponseEntity.status(ex.getHttpStatus()).body(standarizedApiExceptionResponse);
     }
-    
+
 }
