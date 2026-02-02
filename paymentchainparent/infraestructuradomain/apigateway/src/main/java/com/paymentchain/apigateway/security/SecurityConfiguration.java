@@ -10,8 +10,7 @@ import org.springframework.security.web.server.SecurityWebFilterChain;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.reactive.CorsWebFilter;
 import org.springframework.web.cors.reactive.UrlBasedCorsConfigurationSource;
-
-import java.util.List;
+import java.util.Arrays;
 
 @Configuration
 @EnableWebFluxSecurity
@@ -21,8 +20,24 @@ public class SecurityConfiguration {
     private boolean swaggerDebugAllowAll;
 
     @Bean
+    public CorsWebFilter corsWebFilter() {
+        CorsConfiguration config = new CorsConfiguration();
+        config.setAllowedOrigins(Arrays.asList("http://localhost:3000"));
+        config.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+        config.setAllowedHeaders(Arrays.asList("*"));
+        config.setAllowCredentials(true);
+        config.setExposedHeaders(Arrays.asList("Authorization", "content-type"));
+
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", config);
+        return new CorsWebFilter(source);
+    }
+
+    @Bean
     public SecurityWebFilterChain securityWebFilterChain(ServerHttpSecurity http) {
         http.csrf(ServerHttpSecurity.CsrfSpec::disable);
+        // http.cors(); // Eliminado porque está deprecado en Spring Security 6.1+
+        // El filtro CorsWebFilter ya está registrado como @Bean y es suficiente para WebFlux
 
         if (swaggerDebugAllowAll) {
             http.authorizeExchange(exchange -> exchange
@@ -45,7 +60,7 @@ public class SecurityConfiguration {
                     .pathMatchers(HttpMethod.GET, "/customers", "/accounts", "/transactions").permitAll()
                     .pathMatchers(HttpMethod.POST, "/transactions").permitAll()
                     .pathMatchers(HttpMethod.GET, "/customers/**", "/accounts/**", "/transactions/**").permitAll()
-
+                    .pathMatchers(HttpMethod.OPTIONS, "/**").permitAll() // Permitir preflight requests
                     .anyExchange().authenticated()
             );
         } else {
@@ -69,7 +84,7 @@ public class SecurityConfiguration {
                     .pathMatchers(HttpMethod.GET, "/customers", "/accounts", "/transactions").hasRole("ADMIN")
                     .pathMatchers(HttpMethod.POST, "/transactions").hasAnyRole("ADMIN", "USER")
                     .pathMatchers(HttpMethod.GET, "/customers/**", "/accounts/**", "/transactions/**").hasAnyRole("ADMIN", "USER")
-
+                    .pathMatchers(HttpMethod.OPTIONS, "/**").permitAll() // Permitir preflight requests
                     .anyExchange().authenticated()
             );
         }
@@ -81,19 +96,5 @@ public class SecurityConfiguration {
         );
 
         return http.build();
-    }
-
-    @Bean
-    public CorsWebFilter corsWebFilter() {
-        CorsConfiguration corsConfig = new CorsConfiguration();
-        // Use allowed origin patterns so wildcard + credentials work in dev
-        corsConfig.setAllowedOriginPatterns(List.of("*")); // for dev allow all; restrict in prod
-        corsConfig.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
-        corsConfig.setAllowedHeaders(List.of("*"));
-        corsConfig.setAllowCredentials(true);
-
-        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        source.registerCorsConfiguration("/**", corsConfig);
-        return new CorsWebFilter(source);
     }
 }

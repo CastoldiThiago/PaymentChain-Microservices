@@ -2,7 +2,6 @@ package com.paymentchain.customer.service;
 
 import com.paymentchain.customer.entities.Customer;
 import com.paymentchain.customer.exception.DuplicateResourceException;
-import com.paymentchain.customer.mapper.CustomerMapper;
 import com.paymentchain.customer.repository.CustomerRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -14,7 +13,6 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
-import org.springframework.web.reactive.function.client.WebClient;
 
 import java.util.Collections;
 import java.util.Optional;
@@ -30,12 +28,6 @@ class CustomerServiceUnitTest {
     @Mock
     private CustomerRepository customerRepository;
 
-    @Mock
-    private WebClient.Builder webClientBuilder;
-
-    @Mock
-    private CustomerMapper customerMapper;
-
     @InjectMocks
     private CustomerService customerService;
 
@@ -44,21 +36,21 @@ class CustomerServiceUnitTest {
     }
 
     @Test
-    void createCustomerWithAccount_shouldThrowWhenEmailExists() {
+    void createCustomer_shouldThrowWhenEmailExists() {
         Customer incoming = new Customer();
         incoming.setEmail("existing@example.com");
 
         when(customerRepository.existsByEmail("existing@example.com")).thenReturn(true);
 
         DuplicateResourceException ex = assertThrows(DuplicateResourceException.class,
-                () -> customerService.createCustomerWithAccount(incoming));
+                () -> customerService.create(incoming));
 
         assertThat(ex.getField()).isEqualTo("email");
         verify(customerRepository, never()).save(any());
     }
 
     @Test
-    void createCustomerWithAccount_shouldThrowWhenDniExists() {
+    void createCustomer_shouldThrowWhenDniExists() {
         Customer incoming = new Customer();
         incoming.setDni("12345678");
 
@@ -66,7 +58,7 @@ class CustomerServiceUnitTest {
         when(customerRepository.existsByDni("12345678")).thenReturn(true);
 
         DuplicateResourceException ex = assertThrows(DuplicateResourceException.class,
-                () -> customerService.createCustomerWithAccount(incoming));
+                () -> customerService.create(incoming));
 
         assertThat(ex.getField()).isEqualTo("dni");
         verify(customerRepository, never()).save(any());

@@ -29,11 +29,13 @@ public class Transaction {
     private BigDecimal fee;
     private BigDecimal total;
 
+    @Enumerated(EnumType.STRING)
     private TransactionStatus status; // PENDING, COMPLETED, REJECTED
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "account_id")
     private Account account;
     private String currency;
+    @Enumerated(EnumType.STRING)
     private TransactionType type; // DEPOSIT, WITHDRAWAL
 }

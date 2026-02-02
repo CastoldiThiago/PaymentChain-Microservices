@@ -4,7 +4,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 
 @Data
-@Schema(description = "Short customer response with assigned IBAN if available")
+@Schema(description = "customer response DTO")
 public class CustomerResponse {
     @Schema(description = "Internal customer identifier", example = "1")
     private Long customerId;
@@ -18,9 +18,9 @@ public class CustomerResponse {
     @Schema(description = "Document (DNI) number", example = "49844274")
     private String dni;
 
+    @Schema(description = "Email address of the customer", example = "catr@gmail.com")
+    private String email;
+
     @Schema(description = "Customer status", example = "ACTIVE")
     private String status;
-
-    @Schema(description = "Assigned account IBAN (if an account was created for the customer)", example = "AR17699")
-    private String assignedIban;
 }

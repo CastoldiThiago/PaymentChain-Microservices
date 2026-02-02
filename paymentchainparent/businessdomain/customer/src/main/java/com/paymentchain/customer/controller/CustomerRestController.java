@@ -34,12 +34,12 @@ public class CustomerRestController {
     private final CustomerService customerService;
     private final CustomerMapper customerMapper;
 
-    @Operation(summary = "Create a new customer and create an associated account")
+    @Operation(summary = "Create a new customer")
     @ApiResponses({@ApiResponse(responseCode = "201", description = "Customer created"), @ApiResponse(responseCode = "400", description = "Invalid input")})
     @PostMapping
     public ResponseEntity<CustomerResponse> create(@Valid @RequestBody CustomerRequest request) {
         Customer entity = customerMapper.toEntity(request);
-        CustomerResponse created = customerService.createCustomerWithAccount(entity);
+        CustomerResponse created = customerService.create(entity);
         return ResponseEntity.status(HttpStatus.CREATED).body(created);
     }
 

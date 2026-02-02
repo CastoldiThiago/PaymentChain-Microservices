@@ -20,6 +20,9 @@ public class CustomerFullResponse {
     @Schema(description = "Document (DNI) number", example = "49844274")
     private String dni;
 
+    @Schema(description = "Email address of the customer", example = "catr@gmail.com")
+    private String email;
+
     @Schema(description = "Customer status", example = "ACTIVE")
     private String status;
 

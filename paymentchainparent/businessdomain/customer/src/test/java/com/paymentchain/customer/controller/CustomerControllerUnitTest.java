@@ -72,7 +72,7 @@ class CustomerControllerUnitTest {
         resp.setName("Thiago");
 
         when(customerMapper.toEntity(any(CustomerRequest.class))).thenReturn(new Customer());
-        when(customerService.createCustomerWithAccount(any(Customer.class))).thenReturn(resp);
+        when(customerService.create(any(Customer.class))).thenReturn(resp);
 
         mockMvc.perform(post("/customers")
                 .contentType(MediaType.APPLICATION_JSON)
@@ -80,7 +80,7 @@ class CustomerControllerUnitTest {
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.customerId").value(1));
 
-        verify(customerService).createCustomerWithAccount(any(Customer.class));
+        verify(customerService).create(any(Customer.class));
     }
 
     @Test

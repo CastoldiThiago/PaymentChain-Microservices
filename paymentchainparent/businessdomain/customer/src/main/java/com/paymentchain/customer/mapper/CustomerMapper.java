@@ -24,27 +24,14 @@ public class CustomerMapper {
         return customer;
     }
 
-    // Entity -> Response (DTO Simple) with IBAN
-    public CustomerResponse toResponse(Customer entity, String iban) {
-        CustomerResponse dto = new CustomerResponse();
-        dto.setCustomerId(entity.getId());
-        dto.setName(entity.getName());
-        dto.setSurname(entity.getSurname());
-        dto.setDni(entity.getDni());
-        dto.setStatus(entity.getStatus());
-
-        dto.setAssignedIban(iban);
-
-        return dto;
-    }
-
-    // Entity -> Response (DTO Simple) without IBAN
+    // Entity -> Response (DTO)
     public CustomerResponse toResponse(Customer entity) {
         CustomerResponse dto = new CustomerResponse();
         dto.setCustomerId(entity.getId());
         dto.setName(entity.getName());
         dto.setSurname(entity.getSurname());
         dto.setDni(entity.getDni());
+        dto.setEmail(entity.getEmail());
         dto.setStatus(entity.getStatus());
         return dto;
     }
@@ -61,6 +48,7 @@ public class CustomerMapper {
         dto.setSurname(entity.getSurname());
         dto.setDni(entity.getDni());
         dto.setStatus(entity.getStatus());
+        dto.setEmail(entity.getEmail());
         dto.setAccounts(accounts);
         return dto;
     }
