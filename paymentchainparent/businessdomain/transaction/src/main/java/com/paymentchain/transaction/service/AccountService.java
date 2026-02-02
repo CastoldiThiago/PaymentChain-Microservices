@@ -4,10 +4,10 @@ import com.paymentchain.transaction.dtos.CreateAccountRequest;
 import com.paymentchain.transaction.entities.Account;
 import com.paymentchain.transaction.entities.AccountProduct;
 import com.paymentchain.transaction.exception.DuplicateResourceException;
+import com.paymentchain.transaction.exception.ResourceNotFoundException;
 import com.paymentchain.transaction.repository.AccountProductRepository;
 import com.paymentchain.transaction.repository.AccountRepository;
 import jakarta.transaction.Transactional;
-import jakarta.ws.rs.NotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -38,8 +38,10 @@ public class AccountService {
 
     @Transactional
     public Account create(CreateAccountRequest request) {
-        AccountProduct product = productRepository.findById(request.getProductId()).orElse(null);
-        if (product == null) throw new NotFoundException("Product not found");
+        // Validación: el producto debe existir
+        AccountProduct product = productRepository.findById(request.getProductId())
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "AccountProduct", "id", request.getProductId()));
 
         if (request.getIban() != null && accountRepository.existsByIban(request.getIban())) {
             throw new DuplicateResourceException("iban", "IBAN already exists");
