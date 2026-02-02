@@ -46,7 +46,7 @@ The solution is based on a layered microservices architecture:
 
 ## Architecture Diagram
 
-> **[Insert architecture diagram here]**
+> ![Architecture Diagram](./images/paymentchain_architecture.png)
 
 ### Main Components
 
@@ -121,7 +121,7 @@ npm run dev
 
 ---
 
-## 🔐 Access & Credentials
+## Access & Credentials
 
 - **Demo User:**
     - Username: `testuser`
@@ -176,7 +176,3 @@ npm run dev
 - Automated integration testing
 
 ---
-
-## Contact
-
-For questions or technical evaluation, please contact the repository owner.
