@@ -13,10 +13,8 @@ import java.util.Map;
 @Slf4j
 public class CurrencyService {
 
-    // Usamos RestTemplate para llamar a una API externa real
     private final RestTemplate restTemplate = new RestTemplate();
 
-    // API Gratuita de Tasas de Cambio (No requiere Key)
     private static final String API_URL = "https://api.frankfurter.dev/v1/latest?base=${from}&symbols=${to}";
 
     /**
@@ -55,7 +53,7 @@ public class CurrencyService {
     // --- FALLBACK METHOD ---
     // Se ejecuta si la API externa está caída o da timeout.
     public BigDecimal fallbackRate(String from, String to, Throwable t) {
-        log.warn("⚠️ API Caída. Usando tasa de contingencia para {} -> {}. Error: {}", from, to, t.getMessage());
+        log.warn("... API Caída. Usando tasa de contingencia para {} -> {}. Error: {}", from, to, t.getMessage());
 
         // En un caso real, podrías buscar en una tabla de BD histórica.
         // Para el demo, devolvemos una tasa fija o simulada.

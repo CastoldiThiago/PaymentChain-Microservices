@@ -28,12 +28,10 @@ public class Account {
 
     private Long customerId; // ID del cliente
 
-    // (EAGER para tener la regla siempre a mano)
     @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "product_id")
     private AccountProduct product;
 
-    // Relación para ver historial desde la cuenta
     @OneToMany(mappedBy = "account", fetch = FetchType.LAZY)
     private List<Transaction> transactions;
 

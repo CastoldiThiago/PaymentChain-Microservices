@@ -36,12 +36,9 @@ public class SecurityConfiguration {
     @Bean
     public SecurityWebFilterChain securityWebFilterChain(ServerHttpSecurity http) {
         http.csrf(ServerHttpSecurity.CsrfSpec::disable);
-        // http.cors(); // Eliminado porque está deprecado en Spring Security 6.1+
-        // El filtro CorsWebFilter ya está registrado como @Bean y es suficiente para WebFlux
 
         if (swaggerDebugAllowAll) {
             http.authorizeExchange(exchange -> exchange
-                    // 1. INFRAESTRUCTURA (Público)
                     .pathMatchers("/eureka/**", "/actuator/**").permitAll()
 
                     // Allow Swagger / OpenAPI endpoints and static resources (public for dev)
@@ -65,7 +62,6 @@ public class SecurityConfiguration {
             );
         } else {
             http.authorizeExchange(exchange -> exchange
-                    // 1. INFRAESTRUCTURA (Público)
                     .pathMatchers("/eureka/**", "/actuator/**").permitAll()
 
                     // Allow Swagger / OpenAPI endpoints and static resources (public for dev)

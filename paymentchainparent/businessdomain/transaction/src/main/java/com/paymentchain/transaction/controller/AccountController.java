@@ -52,7 +52,7 @@ public class AccountController {
     @Operation(summary = "Create an account")
     // POST /accounts - Crear una cuenta nueva
     @PostMapping
-    public ResponseEntity<AccountResponse> create(@Valid @RequestBody CreateAccountRequest request) { // Asumo que ya usas el DTO de entrada que hablamos antes
+    public ResponseEntity<AccountResponse> create(@Valid @RequestBody CreateAccountRequest request) {
         Account saved = accountService.create(request);
         return ResponseEntity.status(HttpStatus.CREATED).body(accountMapper.toResponse(saved));
     }

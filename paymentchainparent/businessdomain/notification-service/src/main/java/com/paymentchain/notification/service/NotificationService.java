@@ -34,7 +34,7 @@ public class NotificationService {
             TransactionResponse transaction = objectMapper.readValue(message, TransactionResponse.class);
 
             // Si llegamos aquí, el JSON era válido y coincide con nuestro DTO
-            log.info("🔔 NOTIFICACIÓN: Procesando transaccion {}. Para notificar. Monto: {}",
+            log.info("NOTIFICACIÓN: Procesando transaccion {}. Para notificar. Monto: {}",
                     transaction.getReference(), transaction.getAmount());
 
             String recipient = "defaultrecipient@gmail.com";
@@ -58,9 +58,8 @@ public class NotificationService {
             }
 
         } catch (Exception e) {
-            // 🔥 CONTROL DE ERRORES (POISON PILL)
-            // Si el mensaje es basura, lo logueamos y LO DESCARTAMOS para no bloquear la cola.
-            log.error("❌ Error procesando mensaje de Kafka: {}", message, e);
+
+            log.error(" Error procesando mensaje de Kafka: {}", message, e);
         }
     }
 }
