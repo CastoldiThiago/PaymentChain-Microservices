@@ -94,10 +94,19 @@ To test secured endpoints, you need to obtain an access token from Keycloak and 
 
 ## Getting Started
 
-### 1. Backend & Infrastructure
+### 1. Build the Backend
+
+Before starting the infrastructure, build all Java microservices to generate the JAR files:
 
 ```bash
-cd paymentchainparent/infraestructuradomain/docker
+cd paymentchainparent
+mvn clean package -DskipTests
+```
+
+### 2. Backend & Infrastructure
+
+```bash
+cd infraestructuradomain/docker
 # Start all services (PostgreSQL, Kafka, Keycloak, MailHog, Eureka, Redis, Spring Boot Admin, etc.)
 docker-compose up -d
 ```
@@ -108,7 +117,7 @@ docker-compose up -d
 - **Redis:** [http://localhost:6379](http://localhost:6379) (default port)
 - **Spring Boot Admin:** [http://localhost:8081](http://localhost:8081)
 
-### 2. Frontend
+### 3. Frontend
 
 ```bash
 cd frontend
@@ -175,4 +184,3 @@ npm run dev
 - Microservices monitoring with Spring Boot Admin
 - Automated integration testing
 
----
