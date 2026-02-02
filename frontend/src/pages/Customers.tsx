@@ -46,50 +46,87 @@ export const Customers: React.FC = () => {
   };
 
   return (
-    <div>
-      <h2>Customers</h2>
-      <form onSubmit={handleSubmit}>
-        <input name="name" value={form.name} onChange={handleChange} placeholder="Name" required />
-        <input name="surname" value={form.surname} onChange={handleChange} placeholder="Surname" required />
-        <input name="email" value={form.email} onChange={handleChange} placeholder="Email" required />
-        <input name="dni" value={form.dni} onChange={handleChange} placeholder="DNI" required />
-        <input name="phone" value={form.phone} onChange={handleChange} placeholder="Phone" required />
-        <button type="submit">Create</button>
-      </form>
-      
-      <div>
-        <p>Total: {totalElements} customers</p>
+    <div className="page-container">
+      <div className="page-header">
+        <h1 className="page-title">Customers</h1>
+        <p className="page-subtitle">Manage customer information and create new accounts</p>
+      </div>
+
+      <div className="card">
+        <h3 className="card-title">Create New Customer</h3>
+        <form onSubmit={handleSubmit} className="form-grid">
+          <div className="form-group">
+            <label className="form-label">Name</label>
+            <input name="name" value={form.name} onChange={handleChange} placeholder="John" className="form-input" required />
+          </div>
+          <div className="form-group">
+            <label className="form-label">Surname</label>
+            <input name="surname" value={form.surname} onChange={handleChange} placeholder="Doe" className="form-input" required />
+          </div>
+          <div className="form-group">
+            <label className="form-label">Email</label>
+            <input name="email" value={form.email} onChange={handleChange} placeholder="john.doe@example.com" type="email" className="form-input" required />
+          </div>
+          <div className="form-group">
+            <label className="form-label">DNI</label>
+            <input name="dni" value={form.dni} onChange={handleChange} placeholder="12345678" className="form-input" required />
+          </div>
+          <div className="form-group">
+            <label className="form-label">Phone</label>
+            <input name="phone" value={form.phone} onChange={handleChange} placeholder="+1234567890" className="form-input" required />
+          </div>
+          <div className="form-actions">
+            <button type="submit" className="btn btn-primary">Create Customer</button>
+          </div>
+        </form>
+      </div>
+
+      <div className="stats-grid">
+        <div className="stat-card">
+          <div className="stat-label">Total Customers</div>
+          <div className="stat-value">{totalElements}</div>
+        </div>
       </div>
       
-      <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-        <thead>
-          <tr>
-            <th style={{ border: '1px solid #ddd', padding: '8px' }}>ID</th>
-            <th style={{ border: '1px solid #ddd', padding: '8px' }}>Name</th>
-            <th style={{ border: '1px solid #ddd', padding: '8px' }}>Surname</th>
-            <th style={{ border: '1px solid #ddd', padding: '8px' }}>Email</th>
-            <th style={{ border: '1px solid #ddd', padding: '8px' }}>DNI</th>
-            <th style={{ border: '1px solid #ddd', padding: '8px' }}>Status</th>
-          </tr>
-        </thead>
-        <tbody>
-          {customers.map(c => (
-            <tr key={c.customerId}>
-              <td style={{ border: '1px solid #ddd', padding: '8px' }}>{c.customerId}</td>
-              <td style={{ border: '1px solid #ddd', padding: '8px' }}>{c.name}</td>
-              <td style={{ border: '1px solid #ddd', padding: '8px' }}>{c.surname}</td>
-              <td style={{ border: '1px solid #ddd', padding: '8px' }}>{c.email}</td>
-              <td style={{ border: '1px solid #ddd', padding: '8px' }}>{c.dni}</td>
-              <td style={{ border: '1px solid #ddd', padding: '8px' }}>{c.status}</td>
+      <div className="table-container">
+        <table className="data-table">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Name</th>
+              <th>Surname</th>
+              <th>Email</th>
+              <th>DNI</th>
+              <th>Status</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {customers.map(c => (
+              <tr key={c.customerId}>
+                <td>{c.customerId}</td>
+                <td>{c.name}</td>
+                <td>{c.surname}</td>
+                <td>{c.email}</td>
+                <td>{c.dni}</td>
+                <td>
+                  <span className={`badge ${c.status === 'ACTIVE' ? 'badge-success' : 'badge-warning'}`}>
+                    {c.status}
+                  </span>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
       
-      <div style={{ marginTop: '20px', display: 'flex', gap: '10px', alignItems: 'center' }}>
-        <button onClick={handlePreviousPage} disabled={page === 0}>Previous</button>
-        <span>Page {page + 1} of {totalPages || 1}</span>
-        <button onClick={handleNextPage} disabled={page >= totalPages - 1}>Next</button>
+      <div className="pagination">
+        <div className="pagination-info">
+          Showing page <span className="page-number">{page + 1}</span> of <span className="page-number">{totalPages || 1}</span>
+        </div>
+        <div className="pagination-controls">
+          <button onClick={handlePreviousPage} disabled={page === 0} className="btn btn-outline btn-sm">Previous</button>
+          <button onClick={handleNextPage} disabled={page >= totalPages - 1} className="btn btn-outline btn-sm">Next</button>
+        </div>
       </div>
     </div>
   );
