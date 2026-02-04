@@ -139,7 +139,7 @@ export const Transactions: React.FC = () => {
 
       <div className="grid-2">
         <div className="card">
-          <h3 className="card-title">💰 Create Transaction</h3>
+          <h3 className="card-title">Create Transaction</h3>
           <form onSubmit={handleCreate} className="form-grid">
             <div className="form-group">
               <label className="form-label">Account IBAN</label>
@@ -178,7 +178,7 @@ export const Transactions: React.FC = () => {
         </div>
 
         <div className="card">
-          <h3 className="card-title">🔄 Transfer Between Accounts</h3>
+          <h3 className="card-title">Transfer Between Accounts</h3>
           <form onSubmit={handleTransfer} className="form-grid">
             <div className="form-group">
               <label className="form-label">Source IBAN</label>

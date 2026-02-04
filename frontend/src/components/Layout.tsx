@@ -14,25 +14,25 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
             to="/customers"
             className={`nav-link ${isActive('/customers') ? 'active' : ''}`}
           >
-            👥 Customers
+            Customers
           </Link>
           <Link
             to="/accounts"
             className={`nav-link ${isActive('/accounts') ? 'active' : ''}`}
           >
-            💳 Accounts
+            Accounts
           </Link>
           <Link
             to="/account-products"
             className={`nav-link ${isActive('/account-products') ? 'active' : ''}`}
           >
-            📦 Products
+            Products
           </Link>
           <Link
             to="/transactions"
             className={`nav-link ${isActive('/transactions') ? 'active' : ''}`}
           >
-            💸 Transactions
+            Transactions
           </Link>
         </div>
       </nav>
