@@ -42,10 +42,15 @@ public class NotificationService {
                 Long customerId = transaction.getCustomerId();
                 if (customerId != null) {
                     Mono<String> emailMono = customerClient.getEmailById(customerId);
-                    String email = emailMono.block(Duration.ofSeconds(2));
+                    // Increase block timeout a bit to tolerate small network hiccups
+                    String email = emailMono.block(Duration.ofSeconds(5));
                     if (email != null && !email.isEmpty()) {
                         recipient = email;
+                    } else {
+                        log.warn("CustomerClient returned no email for customerId={}", customerId);
                     }
+                } else {
+                    log.warn("Transaction {} has no customerId; using default recipient", transaction.getReference());
                 }
             } catch (Exception e) {
                 log.warn("No se pudo obtener el email del cliente para la transacción {}: {}", transaction.getReference(), e.getMessage());
@@ -53,13 +58,12 @@ public class NotificationService {
 
             try {
                 emailService.sendTransactionNotification(transaction, recipient);
-            } catch (Exception ex) {
-                log.error("Error al enviar el email de notificación de transacción: {}", ex.getMessage());
+            } catch (Exception e) {
+                log.error("Failed to send notification for transaction {}: {}", transaction.getReference(), e.getMessage());
             }
 
         } catch (Exception e) {
-
-            log.error(" Error procesando mensaje de Kafka: {}", message, e);
+            log.warn("Malformed transaction JSON received in notification-service: {}", e.getMessage());
         }
     }
 }

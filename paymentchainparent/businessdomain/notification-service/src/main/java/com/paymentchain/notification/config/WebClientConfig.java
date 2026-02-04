@@ -9,7 +9,8 @@ import org.springframework.web.reactive.function.client.WebClient;
 @Configuration
 public class WebClientConfig {
 
-    @Value("${customer.service.url:http://businessdomain-customer:8080}")
+    // Default to API Gateway which routes to customer service; allows us to avoid direct container DNS issues
+    @Value("${customer.service.url:http://api-gateway:8080}")
     private String customerServiceUrl;
 
     @Bean(name = "customerWebClient")
