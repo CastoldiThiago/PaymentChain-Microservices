@@ -18,10 +18,11 @@ public class CurrencyCacheService {
 
     private final RestTemplate restTemplate = new RestTemplate();
 
-    @Value("${external.api.exchange-rate.url}")
+    // Provide sensible defaults so ApplicationContext can load in tests without Config Server
+    @Value("${external.api.exchange-rate.url:https://v6.exchangerate-api.com/v6}")
     private String baseUrl;
 
-    @Value("${external.api.exchange-rate.key}")
+    @Value("${external.api.exchange-rate.key:}")
     private String apiKey;
 
     @Autowired
@@ -38,6 +39,12 @@ public class CurrencyCacheService {
         String toUpper = to.toUpperCase();
         log.info("⚡ Fetching exchange rate from external API: {} -> {}", fromUpper, toUpper);
         if (fromUpper.equals(toUpper)) return BigDecimal.ONE;
+
+        // if apiKey is empty, avoid calling external API and use fallback
+        if (apiKey == null || apiKey.isBlank()) {
+            log.warn("No API key configured for external exchange-rate service; using fallback rate");
+            return fallbackRate(fromUpper, toUpper, null);
+        }
 
         String url = String.format("%s/%s/pair/%s/%s", baseUrl, apiKey, fromUpper, toUpper);
         try {

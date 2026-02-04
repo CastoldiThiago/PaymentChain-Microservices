@@ -119,6 +119,13 @@ docker-compose up -d
 
 ### 3. Frontend
 
+Before starting the frontend, copy the `.env.example` file to `.env` in the `frontend` folder and adjust any environment variables if necessary. For example (PowerShell):
+
+```powershell
+cd frontend
+copy .env.example .env
+```
+
 ```bash
 cd frontend
 npm install
@@ -183,4 +190,3 @@ npm run dev
 - Distributed caching with Redis
 - Microservices monitoring with Spring Boot Admin
 - Automated integration testing
-
