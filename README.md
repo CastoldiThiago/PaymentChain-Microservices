@@ -46,7 +46,7 @@ The solution is based on a layered microservices architecture:
 
 ## Architecture Diagram
 
-> ![Architecture Diagram](./images/paymentchain_architecture.png)
+> ![Architecture Diagram](./images/architecture_diagram.png)
 
 ### Main Components
 
