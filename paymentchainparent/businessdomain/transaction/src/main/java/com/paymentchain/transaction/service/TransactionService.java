@@ -1,10 +1,10 @@
-
 package com.paymentchain.transaction.service;
 
 import com.paymentchain.transaction.client.CurrencyExchangeClient;
 import com.paymentchain.transaction.dtos.CreateTransactionRequest;
 import com.paymentchain.transaction.dtos.TransactionResponse;
 import com.paymentchain.transaction.dtos.TransferRequest;
+import com.paymentchain.transaction.dtos.TransferResponseDTO;
 import com.paymentchain.transaction.entities.Account;
 import com.paymentchain.transaction.entities.Transaction;
 import com.paymentchain.transaction.enums.TransactionStatus;
@@ -48,6 +48,11 @@ public class TransactionService {
         Account account = accountRepository.findByIbanForUpdate(request.getAccountIban())
                 .orElseThrow(() -> new BusinessRuleException("1001", "Cuenta no encontrada", HttpStatus.PRECONDITION_FAILED));
 
+        if (request.getCurrency() == null || account.getCurrency() == null) {
+            log.error("[ERROR] performTransaction: currency null. request.getCurrency()={}, account.getCurrency()={}", request.getCurrency(), account.getCurrency(), new Exception("StackTrace for null currency"));
+            throw new BusinessRuleException("1006", "Currency must not be null for transaction", HttpStatus.BAD_REQUEST);
+        }
+
         BigDecimal amount = request.getAmount();
         if (!request.getCurrency().equalsIgnoreCase(account.getCurrency())) {
             BigDecimal rate = currencyExchangeClient.getExchangeRate(request.getCurrency(), account.getCurrency());
@@ -81,14 +86,23 @@ public class TransactionService {
         return mapper.toResponse(savedTransaction);
     }
 
+    /**
+     * Performs a transfer between two accounts and returns a detailed response.
+     * @param request TransferRequest
+     * @return TransferResponseDTO with debit and credit transaction details
+     * @throws BusinessRuleException if any business rule fails
+     */
     @Transactional
-    public void transfer(TransferRequest request) throws BusinessRuleException {
+    public TransferResponseDTO transfer(TransferRequest request) throws BusinessRuleException {
         Account source = accountRepository.findByIbanForUpdate(request.getSourceIban())
                 .orElseThrow(() -> new BusinessRuleException("1001", "Cuenta origen no existe", HttpStatus.NOT_FOUND));
         Account target = accountRepository.findByIbanForUpdate(request.getTargetIban())
                 .orElseThrow(() -> new BusinessRuleException("1001", "Cuenta destino no existe", HttpStatus.NOT_FOUND));
 
-
+        if (source.getCurrency() == null || target.getCurrency() == null) {
+            log.error("[ERROR] transfer: currency null. source.getCurrency()={}, target.getCurrency()={}", source.getCurrency(), target.getCurrency(), new Exception("StackTrace for null currency"));
+            throw new BusinessRuleException("1006", "Currency must not be null for transfer", HttpStatus.BAD_REQUEST);
+        }
 
         // --- PROCESAR DÉBITO (ORIGEN) ---
         BigDecimal sourceAmount = request.getAmount();
@@ -106,9 +120,10 @@ public class TransactionService {
 
         // --- PROCESAR CRÉDITO (DESTINO) ---
         BigDecimal targetAmount = request.getAmount();
-        if (source.getCurrency() != null && target.getCurrency() != null &&
-                !source.getCurrency().equalsIgnoreCase(target.getCurrency())) {
+        if (!source.getCurrency().equalsIgnoreCase(target.getCurrency())) {
+            log.info("Llamando servicio de conversión para transferencia entre {} y {}", source.getCurrency(), target.getCurrency());
             BigDecimal rate = currencyExchangeClient.getExchangeRate(source.getCurrency(), target.getCurrency());
+            log.info("💱 Transferencia con conversión: {} {} -> {} {} a tasa {}", sourceAmount, source.getCurrency(), target.getCurrency(), targetAmount, rate);
             targetAmount = sourceAmount.multiply(rate);
         }
 
@@ -118,19 +133,20 @@ public class TransactionService {
         accountRepository.save(target);
 
         // --- REGISTRAR TRANSACCIONES Y NOTIFICAR ---
-
         Transaction debitTx = createTransactionEntity(source, sourceAmount.negate(), fee, "TRANSFER SENT: " + request.getReference(), TransactionType.WITHDRAWAL);
         Transaction savedDebit = transactionRepository.save(debitTx);
-
-        // Notificar al que envía el dinero
         this.sendNotification(mapper.toResponse(savedDebit));
 
-        // Guardar Crédito
         Transaction creditTx = createTransactionEntity(target, targetAmount, BigDecimal.ZERO, "TRANSFER RECEIVED: " + request.getReference(), TransactionType.DEPOSIT);
         Transaction savedCredit = transactionRepository.save(creditTx);
-
-        // Notificar al que recibe el dinero
         this.sendNotification(mapper.toResponse(savedCredit));
+
+        return TransferResponseDTO.builder()
+                .debitTransaction(mapper.toResponse(savedDebit))
+                .creditTransaction(mapper.toResponse(savedCredit))
+                .status("COMPLETED")
+                .reference(request.getReference())
+                .build();
     }
 
     // Read helpers

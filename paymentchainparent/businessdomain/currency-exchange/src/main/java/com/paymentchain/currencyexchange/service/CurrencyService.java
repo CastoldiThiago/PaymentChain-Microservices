@@ -1,12 +1,10 @@
 package com.paymentchain.currencyexchange.service;
 
-import com.paymentchain.currencyexchange.dtos.ExchangeRateApiResponse;
-import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.cache.annotation.Cacheable;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cache.Cache;
+import org.springframework.cache.CacheManager;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.RestTemplate;
 
 import java.math.BigDecimal;
 
@@ -14,56 +12,55 @@ import java.math.BigDecimal;
 @Slf4j
 public class CurrencyService {
 
-    private final RestTemplate restTemplate = new RestTemplate();
+    @Autowired
+    private CurrencyCacheService currencyCacheService;
 
-    @Value("${external.api.exchange-rate.url}")
-    private String baseUrl;
-
-    @Value("${external.api.exchange-rate.key}")
-    private String apiKey;
+    @Autowired
+    private CacheManager cacheManager;
 
     /**
-     * Endpoint Pair Conversion: https://v6.exchangerate-api.com/v6/YOUR-API-KEY/pair/EUR/GBP
+     * Public method: validates parameters, then delegates to cacheable service.
      */
-    @Cacheable(value = "exchangeRates", key = "#from + '_' + #to")
-    @CircuitBreaker(name = "externalApi", fallbackMethod = "fallbackRate")
     public BigDecimal getExchangeRate(String from, String to) {
-
-        String fromUpper = from.toUpperCase();
-        String toUpper = to.toUpperCase();
-
-        log.info("⚡ Buscando tasa en ExchangeRate-API: {} -> {}", fromUpper, toUpper);
-
-        if (fromUpper.equals(toUpper)) return BigDecimal.ONE;
-
-        // Construimos la URL dinámica
-        // Estructura: BASE_URL / KEY / pair / FROM / TO
-        String url = String.format("%s/%s/pair/%s/%s", baseUrl, apiKey, fromUpper, toUpper);
-
-        try {
-            ExchangeRateApiResponse response = restTemplate.getForObject(url, ExchangeRateApiResponse.class);
-
-            if (response != null && "success".equalsIgnoreCase(response.getResult()) && response.getConversionRate() != null) {
-                return response.getConversionRate();
-            } else {
-                log.error("Error en respuesta de API: {}", response);
-                throw new RuntimeException("Error obteniendo tasa de cambio");
-            }
-
-        } catch (Exception e) {
-            log.error("Fallo al llamar a ExchangeRate-API: {}", e.getMessage());
-            throw e; // Lanza para activar el CircuitBreaker
+        log.info("[DEBUG] getExchangeRate called with from='{}', to='{}'", from, to);
+        if (from == null || to == null) {
+            log.error("[ERROR] CurrencyService.getExchangeRate called with null parameters: from={}, to={}", from, to, new Exception("StackTrace for null currency"));
+            throw new IllegalArgumentException("Currency codes 'from' and 'to' must not be null");
         }
-    }
+        String fromSan = from.trim();
+        String toSan = to.trim();
+        if (fromSan.isEmpty() || toSan.isEmpty() || "null".equalsIgnoreCase(fromSan) || "null".equalsIgnoreCase(toSan)) {
+            log.error("[ERROR] CurrencyService.getExchangeRate called with invalid parameters: from='{}', to='{}'", from, to);
+            throw new IllegalArgumentException("Currency codes 'from' and 'to' must be non-empty and not 'null'");
+        }
 
-    // --- FALLBACK METHOD ---
-    public BigDecimal fallbackRate(String from, String to, Throwable t) {
-        log.warn("🛡️ Activando Fallback para: {} -> {}. Causa: {}", from, to, t.getMessage());
+        // Try to read from cache manually first (key format: FROM_TO uppercase)
+        String key = fromSan.toUpperCase() + "_" + toSan.toUpperCase();
+        try {
+            if (cacheManager != null) {
+                log.info("[CACHE DEBUG] cacheManager implementation = {}", cacheManager.getClass().getName());
+                Cache cache = cacheManager.getCache("exchangeRates");
+                log.info("[CACHE DEBUG] cache instance = {}", cache == null ? "null" : cache.getClass().getName());
+                if (cache != null) {
+                    Cache.ValueWrapper vw = cache.get(key);
+                    if (vw != null && vw.get() instanceof BigDecimal) {
+                        BigDecimal cached = (BigDecimal) vw.get();
+                        log.info("[CACHE HIT] exchangeRates key='{}' value={}", key, cached);
+                        return cached;
+                    } else if (vw != null) {
+                        log.info("[CACHE HIT] exchangeRates key='{}' value present but not BigDecimal: {}", key, vw.get());
+                    } else {
+                        log.info("[CACHE MISS] exchangeRates key='{}'", key);
+                    }
+                } else {
+                    log.warn("[CACHE] Cache 'exchangeRates' not found in CacheManager");
+                }
+            }
+        } catch (Exception e) {
+            log.warn("[CACHE] Error while reading cache for key '{}': {}", key, e.getMessage());
+        }
 
-        // Valores 'Hardcodeados' de emergencia por si se te acaba el plan gratuito o cae la API
-        if ("USD".equalsIgnoreCase(from) && "ARS".equalsIgnoreCase(to)) return new BigDecimal("1400"); // Dólar Blue aprox
-        if ("EUR".equalsIgnoreCase(from) && "ARS".equalsIgnoreCase(to)) return new BigDecimal("1500");
-
-        return BigDecimal.ONE;
+        // Delegate to cacheable method (it will fetch and also write manually as a safeguard)
+        return currencyCacheService.getExchangeRateCached(fromSan, toSan);
     }
 }

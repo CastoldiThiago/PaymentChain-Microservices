@@ -43,7 +43,6 @@ services:
   keycloak:
     image: quay.io/keycloak/keycloak:24.0.1
     container_name: paymentchain-keycloak
-    command: start-dev
     environment:
       KEYCLOAK_ADMIN: admin
       KEYCLOAK_ADMIN_PASSWORD: admin
@@ -56,6 +55,9 @@ services:
       KC_HOSTNAME_STRICT_HTTPS: false
     ports:
       - "8180:8080"
+    volumes:
+      - ./keycloak-config/realm-export.json:/opt/keycloak/data/import/realm.json
+    command: start-dev --import-realm
     depends_on:
       - postgres-db
     networks:
@@ -234,6 +236,8 @@ services:
       - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka-server:8761/eureka/
       - REDIS_HOST=paymentchain-redis
       - REDIS_PORT=6379
+      - SPRING_REDIS_HOST=paymentchain-redis
+      - SPRING_REDIS_PORT=6379
     depends_on:
       config-server:
         condition: service_healthy

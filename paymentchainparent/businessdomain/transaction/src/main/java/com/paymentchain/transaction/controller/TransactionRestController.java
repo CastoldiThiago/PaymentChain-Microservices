@@ -7,6 +7,7 @@ package com.paymentchain.transaction.controller;
 import com.paymentchain.transaction.dtos.CreateTransactionRequest;
 import com.paymentchain.transaction.dtos.TransactionResponse;
 import com.paymentchain.transaction.dtos.TransferRequest;
+import com.paymentchain.transaction.dtos.TransferResponseDTO;
 import com.paymentchain.transaction.entities.Transaction;
 import com.paymentchain.transaction.exception.BusinessRuleException;
 import com.paymentchain.transaction.mapper.TransactionMapper;
@@ -14,6 +15,7 @@ import com.paymentchain.transaction.service.TransactionService;
 import com.paymentchain.transaction.util.SortUtils;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -110,10 +112,10 @@ public class TransactionRestController {
             @ApiResponse(responseCode = "500", description = "Internal server error")
     })
     @PostMapping("/transfer")
-    public ResponseEntity<Void> transfer(
-            @io.swagger.v3.oas.annotations.parameters.RequestBody(description = "Transfer request payload", required = true, content = @io.swagger.v3.oas.annotations.media.Content)
+    public ResponseEntity<TransferResponseDTO> transfer(
+            @io.swagger.v3.oas.annotations.parameters.RequestBody(description = "Transfer request payload", required = true, content = @Content)
             @Valid @RequestBody TransferRequest request) throws BusinessRuleException {
-        transactionService.transfer(request);
-        return ResponseEntity.ok().build(); // 200 OK if successful
+        TransferResponseDTO transfer = transactionService.transfer(request);
+        return ResponseEntity.ok(transfer);
     }
 }
