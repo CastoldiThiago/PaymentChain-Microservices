@@ -48,8 +48,16 @@ export const getTransactionById = (id: number) =>
 export const getTransactionsByAccount = (iban: string) =>
   axiosInstance.get<PageableResponse<Transaction>>(`${import.meta.env.VITE_API_TRANSACTION_URL}/account/${iban}`);
 
-export const createTransaction = (data: CreateTransactionRequest) =>
-  axiosInstance.post(import.meta.env.VITE_API_TRANSACTION_URL, data);
+export const createTransaction = (data: CreateTransactionRequest, idempotencyKey?: string) =>
+  axiosInstance.post(
+    import.meta.env.VITE_API_TRANSACTION_URL,
+    data,
+    idempotencyKey ? { headers: { 'Idempotency-Key': idempotencyKey } } : undefined
+  );
 
-export const transferTransaction = (data: TransferRequest) =>
-  axiosInstance.post(`${import.meta.env.VITE_API_TRANSACTION_URL}/transfer`, data);
+export const transferTransaction = (data: TransferRequest, idempotencyKey?: string) =>
+  axiosInstance.post(
+    `${import.meta.env.VITE_API_TRANSACTION_URL}/transfer`,
+    data,
+    idempotencyKey ? { headers: { 'Idempotency-Key': idempotencyKey } } : undefined
+  );

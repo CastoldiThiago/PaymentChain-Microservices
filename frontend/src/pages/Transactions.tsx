@@ -10,6 +10,7 @@ import {
 import { CURRENCIES } from '../constants';
 import { useNotification } from '../context/NotificationContext';
 import { getErrorMessage } from '../utils/errorHandler';
+import { useIdempotencyKey } from '../hooks/useIdempotencyKey';
 
 export const Transactions: React.FC = () => {
   const { showSuccess, showError } = useNotification();
@@ -20,6 +21,8 @@ export const Transactions: React.FC = () => {
   const [accountFilter, setAccountFilter] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isTransferring, setIsTransferring] = useState(false);
+  const { key: createKey, regenerate: regenerateCreateKey } = useIdempotencyKey();
+  const { key: transferKey, regenerate: regenerateTransferKey } = useIdempotencyKey();
 
   const [form, setForm] = useState({
     accountIban: '',
@@ -69,7 +72,7 @@ export const Transactions: React.FC = () => {
 
   const handleCreate = (e: React.FormEvent) => {
     e.preventDefault();
-    if (isSubmitting) return;
+    if (isSubmitting || !createKey) return;
     
     const payload: CreateTransactionRequest = {
       accountIban: form.accountIban.trim(),
@@ -80,10 +83,11 @@ export const Transactions: React.FC = () => {
     };
     
     setIsSubmitting(true);
-    createTransaction(payload)
+    createTransaction(payload, createKey)
       .then(() => {
         showSuccess(`${form.type === 'DEPOSIT' ? 'Deposit' : 'Withdrawal'} completed successfully!`);
         setForm({ accountIban: '', amount: '', reference: '', currency: 'USD', type: 'DEPOSIT' });
+        regenerateCreateKey();
         loadTransactions(page);
       })
       .catch(error => {
@@ -97,7 +101,7 @@ export const Transactions: React.FC = () => {
 
   const handleTransfer = (e: React.FormEvent) => {
     e.preventDefault();
-    if (isTransferring) return;
+    if (isTransferring || !transferKey) return;
     
     const payload: TransferRequest = {
       sourceIban: transferForm.sourceIban.trim(),
@@ -107,10 +111,11 @@ export const Transactions: React.FC = () => {
     };
     
     setIsTransferring(true);
-    transferTransaction(payload)
+    transferTransaction(payload, transferKey)
       .then(() => {
         showSuccess('Transfer completed successfully!');
         setTransferForm({ sourceIban: '', targetIban: '', amount: '', reference: '' });
+        regenerateTransferKey();
         loadTransactions(page);
       })
       .catch(error => {
@@ -170,7 +175,7 @@ export const Transactions: React.FC = () => {
               </select>
             </div>
             <div className="form-actions">
-              <button type="submit" className="btn btn-primary" disabled={isSubmitting}>
+              <button type="submit" className="btn btn-primary" disabled={isSubmitting || !createKey}>
                 {isSubmitting ? 'Processing...' : 'Execute Transaction'}
               </button>
             </div>
@@ -197,7 +202,7 @@ export const Transactions: React.FC = () => {
               <input name="reference" value={transferForm.reference} onChange={handleTransferChange} placeholder="Birthday gift" className="form-input" />
             </div>
             <div className="form-actions">
-              <button type="submit" className="btn btn-primary" disabled={isTransferring}>
+              <button type="submit" className="btn btn-primary" disabled={isTransferring || !transferKey}>
                 {isTransferring ? 'Processing...' : 'Transfer Funds'}
               </button>
             </div>
