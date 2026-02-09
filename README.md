@@ -44,6 +44,31 @@ The solution is based on a layered microservices architecture:
 
 ---
 
+## Resilience & Fault Tolerance
+
+This project implements advanced stability patterns to ensure reliability in distributed environments:
+
+### 1. Idempotency (Double-Check Locking)
+To prevent duplicate payments during network timeouts or user retries, the system implements a robust **Idempotency Key** pattern:
+- **Frontend:** Generates a unique UUID (`Idempotency-Key` header) for each specific payment intent.
+- **Backend:** Uses a hybrid strategy with **Redis** (Atomic Locking) and **PostgreSQL** (Long-term consistency).
+- **Workflow:**
+    1.  **Check:** Service checks Redis/DB if the key exists.
+    2.  **Lock:** If new, acquires an atomic lock in Redis.
+    3.  **Process:** Executes the transaction.
+    4.  **Response:**
+        - *First Request:* Returns `201 Created`.
+        - *Retry (Same Key):* Returns the cached response `200 OK` without re-processing the payment.
+
+### 2. Circuit Breaker (Resilience4j)
+- Protects the `transaction-service` from cascading failures when external services (like the Currency Exchange API) are down or slow.
+- **Fallback Mechanism:** Returns a default/safe exchange rate to allow the system to degrade gracefully and keep operating.
+
+### 3. Event-Driven Decoupling
+- Uses **Apache Kafka** to decouple critical paths (Payment Processing) from non-critical paths (Email Notifications).
+- If the Notification Service is down, the transaction still completes successfully, and the email is processed once the service recovers.
+
+---
 ## Architecture Diagram
 
 > ![Architecture Diagram](./images/architecture_diagram.png)
@@ -190,3 +215,4 @@ npm run dev
 - Distributed caching with Redis
 - Microservices monitoring with Spring Boot Admin
 - Automated integration testing
+

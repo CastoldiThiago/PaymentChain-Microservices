@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.paymentchain.transaction.dtos.CreateTransactionRequest;
 import com.paymentchain.transaction.dtos.TransactionResponse;
 import com.paymentchain.transaction.enums.TransactionType;
+import com.paymentchain.transaction.service.IdempotencyService;
 import com.paymentchain.transaction.service.TransactionService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -31,10 +32,14 @@ class TransactionControllerUnitTest {
     private TransactionService transactionService;
 
     private ObjectMapper mapper = new ObjectMapper();
+    @Mock
+    private IdempotencyService idempotencyService;
+
+    private ObjectMapper objectMapper;
 
     @BeforeEach
     void setup() {
-        TransactionRestController controller = new TransactionRestController(transactionService, null);
+        TransactionRestController controller = new TransactionRestController(transactionService, null, idempotencyService, objectMapper);
         mockMvc = MockMvcBuilders.standaloneSetup(controller)
                 .setCustomArgumentResolvers(new PageableHandlerMethodArgumentResolver())
                 .build();

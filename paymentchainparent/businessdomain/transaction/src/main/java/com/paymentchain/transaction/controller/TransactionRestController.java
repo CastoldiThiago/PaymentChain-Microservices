@@ -4,6 +4,8 @@
  */
 package com.paymentchain.transaction.controller;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.paymentchain.transaction.dtos.CreateTransactionRequest;
 import com.paymentchain.transaction.dtos.TransactionResponse;
 import com.paymentchain.transaction.dtos.TransferRequest;
@@ -11,6 +13,7 @@ import com.paymentchain.transaction.dtos.TransferResponseDTO;
 import com.paymentchain.transaction.entities.Transaction;
 import com.paymentchain.transaction.exception.BusinessRuleException;
 import com.paymentchain.transaction.mapper.TransactionMapper;
+import com.paymentchain.transaction.service.IdempotencyService;
 import com.paymentchain.transaction.service.TransactionService;
 import com.paymentchain.transaction.util.SortUtils;
 import io.swagger.v3.oas.annotations.Operation;
@@ -30,6 +33,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Optional;
 import java.util.Set;
 
 @RestController
@@ -40,8 +44,9 @@ public class TransactionRestController {
 
     private final TransactionService transactionService;
     private final TransactionMapper transactionMapper;
+    private final IdempotencyService idempotencyService;
+    private final ObjectMapper objectMapper;
 
-    // NEW: List transactions (optional account filter)
     @Operation(summary = "List transactions", description = "List all transactions or filter by account IBAN using query param 'accountIban'.")
     @GetMapping
     public ResponseEntity<Page<TransactionResponse>> list(@RequestParam(name = "accountIban", required = false) String accountIban,
@@ -62,7 +67,6 @@ public class TransactionRestController {
         return ResponseEntity.ok(dtoPage);
     }
 
-    // NEW: Get transaction by id
     @Operation(summary = "Get transaction by id")
     @GetMapping("/{id}")
     public ResponseEntity<TransactionResponse> getById(@PathVariable(name = "id") Long id) {
@@ -76,15 +80,44 @@ public class TransactionRestController {
     @Operation(summary = "Create a transaction (deposit or withdrawal)", description = "Performs a single transaction on the specified account. Returns the created transaction details.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "201", description = "Transaction created successfully"),
+            @ApiResponse(responseCode = "200", description = "Transaction created successfully without re-processing (idempotent response)"),
             @ApiResponse(responseCode = "400", description = "Bad request - validation failed"),
             @ApiResponse(responseCode = "500", description = "Internal server error")
     })
     @PostMapping
     public ResponseEntity<TransactionResponse> performTransaction(
-            @io.swagger.v3.oas.annotations.parameters.RequestBody(description = "Transaction request payload", required = true, content = @io.swagger.v3.oas.annotations.media.Content)
-            @Valid @RequestBody CreateTransactionRequest request) throws BusinessRuleException {
-        TransactionResponse transaction = transactionService.performTransaction(request);
-        return ResponseEntity.status(HttpStatus.CREATED).body(transaction);
+            @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey,
+            @Valid @RequestBody CreateTransactionRequest request) throws BusinessRuleException, JsonProcessingException {
+
+        if (idempotencyKey != null) {
+            Optional<String> cachedResponse = idempotencyService.getResponse(idempotencyKey);
+            if (cachedResponse.isPresent()) {
+                TransactionResponse response = objectMapper.readValue(cachedResponse.get(), TransactionResponse.class);
+                return ResponseEntity.ok(response);
+            }
+
+            boolean isLocked = idempotencyService.lock(idempotencyKey);
+            if (!isLocked) {
+                throw new BusinessRuleException("409", "Conflict: Transaction currently in progress", HttpStatus.CONFLICT);
+            }
+        }
+
+        try {
+            TransactionResponse transaction = transactionService.performTransaction(request);
+
+            if (idempotencyKey != null) {
+                String jsonResponse = objectMapper.writeValueAsString(transaction);
+                idempotencyService.saveSuccess(idempotencyKey, jsonResponse);
+            }
+
+            return ResponseEntity.status(HttpStatus.CREATED).body(transaction);
+
+        } catch (Exception e) {
+            if (idempotencyKey != null) {
+                idempotencyService.releaseLock(idempotencyKey);
+            }
+            throw e;
+        }
     }
 
     // GET /transactions/account/{iban} - Get account transaction history
@@ -107,15 +140,44 @@ public class TransactionRestController {
     // POST /transactions/transfer - Internal transfer between two accounts
     @Operation(summary = "Transfer between accounts", description = "Performs an internal transfer from one account to another.")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Transfer completed successfully"),
+            @ApiResponse(responseCode = "201", description = "Transfer completed successfully"),
+            @ApiResponse(responseCode = "200", description = "Transfer completed successfully without re-processing the payment (idempotent response)"),
             @ApiResponse(responseCode = "400", description = "Bad request - validation failed"),
             @ApiResponse(responseCode = "500", description = "Internal server error")
     })
     @PostMapping("/transfer")
     public ResponseEntity<TransferResponseDTO> transfer(
+            @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey,
             @io.swagger.v3.oas.annotations.parameters.RequestBody(description = "Transfer request payload", required = true, content = @Content)
-            @Valid @RequestBody TransferRequest request) throws BusinessRuleException {
-        TransferResponseDTO transfer = transactionService.transfer(request);
-        return ResponseEntity.ok(transfer);
+            @Valid @RequestBody TransferRequest request) throws BusinessRuleException, JsonProcessingException {
+        if (idempotencyKey != null) {
+            Optional<String> cachedResponse = idempotencyService.getResponse(idempotencyKey);
+            if (cachedResponse.isPresent()) {
+                TransferResponseDTO response = objectMapper.readValue(cachedResponse.get(), TransferResponseDTO.class);
+                return ResponseEntity.ok(response);
+            }
+
+            boolean isLocked = idempotencyService.lock(idempotencyKey);
+            if (!isLocked) {
+                throw new BusinessRuleException("409", "Conflict: Transaction currently in progress", HttpStatus.CONFLICT);
+            }
+        }
+
+        try {
+            TransferResponseDTO transfer = transactionService.transfer(request);
+
+            if (idempotencyKey != null) {
+                String jsonResponse = objectMapper.writeValueAsString(transfer);
+                idempotencyService.saveSuccess(idempotencyKey, jsonResponse);
+            }
+
+            return ResponseEntity.status(HttpStatus.CREATED).body(transfer);
+
+        } catch (Exception e) {
+            if (idempotencyKey != null) {
+                idempotencyService.releaseLock(idempotencyKey);
+            }
+            throw e;
+        }
     }
 }
