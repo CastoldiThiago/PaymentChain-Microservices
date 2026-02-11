@@ -64,6 +64,15 @@ services:
       - paymentchain-network
     restart: on-failure
 
+  zipkin:
+    image: openzipkin/zipkin:latest
+    container_name: zipkin
+    ports:
+      - "9411:9411"
+    networks:
+      - paymentchain-network
+    restart: on-failure
+
   # ==========================================
   # 2. INFRAESTRUCTURA MICROSERVICIOS
   # ==========================================
@@ -174,6 +183,7 @@ services:
       retries: 10
     networks:
       - paymentchain-network
+    restart: on-failure
 
   mailhog:
     image: mailhog/mailhog
