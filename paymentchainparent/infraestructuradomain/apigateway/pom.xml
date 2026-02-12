@@ -47,6 +47,16 @@
             <artifactId>springdoc-openapi-starter-webflux-ui</artifactId>
             <version>${org.springdoc.version}</version>
         </dependency>
+<!--        Observability-->
+        <dependency>
+            <groupId>io.micrometer</groupId>
+            <artifactId>micrometer-tracing-bridge-otel</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>io.opentelemetry</groupId>
+            <artifactId>opentelemetry-exporter-zipkin</artifactId>
+        </dependency>
 
     </dependencies>
 

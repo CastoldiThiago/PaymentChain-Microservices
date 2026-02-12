@@ -6,6 +6,7 @@
 ![Docker](https://img.shields.io/badge/Docker-Compose-blue?logo=docker)
 ![Kafka](https://img.shields.io/badge/Kafka-Event--Driven-black?logo=apachekafka)
 ![Redis](https://img.shields.io/badge/Redis-Cache-red?logo=redis)
+![Zipkin](https://img.shields.io/badge/Zipkin-Distributed%20Tracing-orange?logo=zipkin)
 ![Spring Admin](https://img.shields.io/badge/Spring%20Admin-Monitoring-blue?logo=spring)
 ![Swagger](https://img.shields.io/badge/Swagger-API%20Docs-green?logo=swagger)
 
@@ -15,9 +16,10 @@
 
 **PaymentChain** is a full-stack Fintech simulation designed to showcase modern software architecture and engineering best practices. The project demonstrates:
 
-- Layered Microservices Architecture (Presentation, Service, Domain, Infrastructure)
+- Layered Microservices Architecture
 - Event-Driven Microservices with Apache Kafka
 - Robust Security with OAuth2/OIDC (Keycloak)
+- Full Distributed Tracing with OpenTelemetry & Zipkin
 - Centralized Configuration and Service Discovery
 - Asynchronous communication and scalable infrastructure
 - Full integration and unit testing with Testcontainers
@@ -36,11 +38,22 @@ The solution is based on a layered microservices architecture:
 - **Presentation Layer:** REST controllers in each microservice expose HTTP APIs and handle request/response mapping.
 - **Service Layer:** Business logic and orchestration, including validation, error handling, and integration with other services.
 - **Domain Layer:** JPA entities and domain models representing business concepts.
-- **Infrastructure Layer:** Spring Data JPA repositories, Kafka integration, Redis caching, email (MailHog), monitoring (Spring Boot Admin), and external service clients.
+- **Infrastructure Layer:** Spring Data JPA repositories, Kafka integration, Redis caching, email (MailHog), monitoring (Spring Boot Admin), distributed tracing (Zipkin), and external service clients.
 - **API Gateway:** Central entry point for all frontend and backend requests, handling routing, security, and CORS.
-- **Service Discovery & Config:** Eureka for service registry, Config Server for centralized configuration.
+- **Service Discovery & Config:** Eureka for service registry, Config Server for centralized configuration (including global Observability settings).
 - **Security:** Keycloak for authentication and authorization (OIDC/OAuth2).
 - **Frontend:** React (Vite) with OIDC authentication, consuming backend APIs via the API Gateway.
+
+---
+
+## Observability & Distributed Tracing
+
+Visibility is critical in a distributed system. PaymentChain implements a complete Observability stack using **Micrometer Tracing** and **OpenTelemetry**:
+
+- **Centralized Tracing:** Every request is assigned a unique `Trace ID` at the API Gateway level.
+- **End-to-End Visibility:** The trace propagates through all microservices (Gateway -> Transaction -> Currency Exchange -> Notification).
+- **Zipkin Dashboard:** Visualize request flows, latency, and bottlenecks.
+- **Implementation:** Configuration is centralized in the Config Server (`application.yml`), ensuring consistent sampling and reporting across all services without code duplication.
 
 ---
 
@@ -69,9 +82,14 @@ To prevent duplicate payments during network timeouts or user retries, the syste
 - If the Notification Service is down, the transaction still completes successfully, and the email is processed once the service recovers.
 
 ---
+
 ## Architecture Diagram
 
-> ![Architecture Diagram](./images/architecture_diagram.png)
+> ![Architecture Diagram](./images/architecture_diagram_v2.png)
+## Secuence Diagram
+### Transaction Flow
+
+> ![Secuence Diagram](./images/transaction_secuence_diagram_v2.png)
 
 ### Main Components
 
@@ -80,7 +98,8 @@ To prevent duplicate payments during network timeouts or user retries, the syste
     - `api-gateway`: Spring Cloud Gateway (single entry point)
     - `discovery-server`: Eureka (service registry)
     - `config-server`: Centralized configuration
-    - `transaction-service`: Business logic, PostgreSQL, integration tests with Testcontainers
+    - `customer-service`: Manages customer data, PostgreSQL
+    - `transaction-service`: Business logic (accounts, transactions and account-products), PostgreSQL, Kafka producer, integration tests with Testcontainers
     - `notification-service`: Kafka consumer, email notifications via MailHog
     - `currency-exchange`: Currency rates microservice, uses Redis for caching currency data
     - `springboot-admin`: Monitoring and management dashboard for all microservices
@@ -127,7 +146,6 @@ Before starting the infrastructure, build all Java microservices to generate the
 cd paymentchainparent
 mvn clean package -DskipTests
 ```
-
 ### 2. Backend & Infrastructure
 
 ```bash
@@ -140,7 +158,8 @@ docker-compose up -d
 - **MailHog (Email Testing):** [http://localhost:8025](http://localhost:8025)
 - **Keycloak:** [http://localhost:8180](http://localhost:8180)
 - **Redis:** [http://localhost:6379](http://localhost:6379) (default port)
-- **Spring Boot Admin:** [http://localhost:8081](http://localhost:8081)
+- **Zipkin:** [http://localhost:9411](http://localhost:9411)
+- **Spring Boot Admin:** [http://localhost:9090/admin](http://localhost:8081)
 
 ### 3. Frontend
 
@@ -170,6 +189,8 @@ npm run dev
 - **Authentication:**
     - Login is performed via the frontend, which redirects to Keycloak (OIDC/OAuth2 PKCE flow)
     - After login, all API requests are authorized with Bearer tokens
+- **Zipkin Tracing:**
+    - Distributed Tracing Dashboard: [http://localhost:9411](http://localhost:9411)
 - **MailHog:**
     - Access email notifications at [http://localhost:8025](http://localhost:8025)
 - **Eureka:**
@@ -177,7 +198,7 @@ npm run dev
 - **Redis:**
     - Currency cache available at [localhost:6379](http://localhost:6379)
 - **Spring Boot Admin:**
-    - Microservices monitoring dashboard at [http://localhost:8081](http://localhost:8081)
+    - Microservices monitoring dashboard at [http://localhost:9090/admin](http://localhost:8081)
 
 ---
 
@@ -196,11 +217,12 @@ npm run dev
 ## Key Technologies
 
 - **Java 21**, **Spring Boot 3**, **Spring Cloud**
-- **React**, **Vite**, **TailwindCSS** (or Material UI)
+- **React**, **Vite**, **TailwindCSS**
 - **Docker & Docker Compose**
 - **Apache Kafka** (Event-Driven Architecture)
 - **Keycloak** (Security/IAM)
-- **Redis** (Distributed Caching)
+- **Redis** (Distributed Caching & Locks)
+- **OpenTelemetry & Zipkin** (Distributed Tracing)
 - **Spring Boot Admin** (Microservices Monitoring)
 - **Testcontainers & JUnit 5** (Integration Testing)
 
@@ -209,10 +231,10 @@ npm run dev
 ## Best Practices
 
 - Layered Microservices Architecture
+- Idempotent API Design
+- Centralized Configuration
 - Asynchronous communication via Kafka
-- Centralized configuration and service discovery
 - Robust security with OAuth2/OIDC
 - Distributed caching with Redis
-- Microservices monitoring with Spring Boot Admin
+- Microservices monitoring & Tracing
 - Automated integration testing
-
